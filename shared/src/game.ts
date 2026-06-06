@@ -277,6 +277,7 @@ export function giveDragon(state: GameState, seat: Seat, toSeat: Seat): GameStat
 
   state.captured[toSeat].push(...pending.cards);
   state.pendingDragon = null;
+  state.trick = emptyTrick(); // the Dragon trick was kept on the table for display
   if (!maybeEndHand(state)) {
     state.turn = handOffTo(state, seat);
   }
@@ -410,15 +411,17 @@ function closeTrick(state: GameState): void {
   if (owner === null) return; // nothing was played
   const cards = state.trick.plays.flatMap((p) => p.combo.cards);
   const top = state.trick.top!;
-  state.trick = emptyTrick();
 
   // A Dragon-won trick must be handed to an opponent of the winner's choosing.
+  // Keep the trick on the table (for display) until they choose — giveDragon
+  // clears it. Until then turn is null and plays/passes are blocked.
   if (top.type === 'single' && isSpecial(top.cards[0], 'dragon')) {
     state.pendingDragon = { winner: owner, cards };
     state.turn = null;
     return;
   }
 
+  state.trick = emptyTrick();
   state.captured[owner].push(...cards);
   state.turn = handOffTo(state, owner);
 }

@@ -173,13 +173,14 @@ function SeatStrip({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => st
     <div className="seatstrip">
       {view.seats.map((s) => {
         const isTurn = view.phase === 'playing' && s.seat === view.turn;
+        const isDragon = view.phase === 'playing' && s.seat === view.pendingDragon;
         const team = seatTeam(s.seat); // 'A' (seats 0·2) or 'B' (seats 1·3)
         return (
           <div
             key={s.seat}
             className={`seatstrip__item seatstrip__item--team-${team.toLowerCase()}${
               s.seat === view.selfSeat ? ' is-self' : ''
-            }${isTurn ? ' is-turn' : ''}`}
+            }${isTurn || isDragon ? ' is-turn' : ''}`}
           >
             <div className="seatstrip__rel">
               <span className="seatstrip__team">팀 {team}</span> · {relation(s.seat)}
@@ -192,6 +193,7 @@ function SeatStrip({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => st
               {view.phase === 'exchange' && s.hasExchanged && <span className="badge">✓</span>}
             </div>
             {isTurn && <div className="seatstrip__turn">▶ 차례</div>}
+            {isDragon && <div className="seatstrip__turn">🐉 용 넘기는 중</div>}
             {s.captured.length > 0 && (
               <div className="seatstrip__captured">
                 <div className="seatstrip__points">
@@ -383,7 +385,11 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
       <div className="phase__head">
         <h2>플레이</h2>
         <span className={`turntag${myTurn ? ' turntag--mine' : ''}`}>
-          {myTurn ? '내 차례' : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
+          {view.pendingDragon !== null
+            ? `🐉 ${nameOf(view.pendingDragon)}가 용 카드를 넘기는 중`
+            : myTurn
+              ? '내 차례'
+              : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
         </span>
       </div>
 

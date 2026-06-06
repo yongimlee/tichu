@@ -116,14 +116,14 @@ const CAPTURED_MID: Card[][] = [
 
 const match = { scores: { A: 120, B: 85 }, target: 1000, handNumber: 3, winner: null } as const;
 
-// In-game scenarios: the real phases plus a "Mahjong lead" view where you hold
-// the Mahjong, lead an empty trick, and can pick a wish.
-type GameScenario = GamePhase | 'mahjong';
+// In-game scenarios: the real phases plus a "Mahjong lead" view (pick a wish)
+// and a "Dragon trick" view (choose who receives the won trick).
+type GameScenario = GamePhase | 'mahjong' | 'dragon';
 // All demo scenarios, including the pre-game lobby flow.
 type Scenario = GameScenario | 'home' | 'lobby-manual' | 'lobby-random';
 
 function buildView(scenario: GameScenario): PlayerView {
-  const phase: GamePhase = scenario === 'mahjong' ? 'playing' : scenario;
+  const phase: GamePhase = scenario === 'mahjong' || scenario === 'dragon' ? 'playing' : scenario;
   const base: PlayerView = {
     phase,
     selfSeat: 0,
@@ -148,6 +148,20 @@ function buildView(scenario: GameScenario): PlayerView {
     case 'mahjong':
       // Leading an empty trick on your turn — select the Mahjong to reveal the wish input.
       return base;
+    case 'dragon':
+      // You won a trick with the Dragon — the trick stays on the table until you
+      // choose an opponent to receive it (turn is null meanwhile).
+      return {
+        ...base,
+        turn: null,
+        pendingDragon: 0,
+        seats: seats([13, 12, 11, 12]),
+        trick: [
+          { seat: 3, type: 'single', cards: [suit('jade', 5)] },
+          { seat: 0, type: 'single', cards: [DRAGON] },
+        ],
+        trickOwner: 0,
+      };
     case 'playing':
       return {
         ...base,
@@ -181,6 +195,7 @@ const PHASES: { key: Scenario; label: string }[] = [
   { key: 'exchange', label: '카드 교환' },
   { key: 'mahjong', label: '참새 리드(소원)' },
   { key: 'playing', label: '플레이' },
+  { key: 'dragon', label: '용 트릭 처리' },
   { key: 'scoring', label: '점수' },
   { key: 'finished', label: '게임 종료' },
 ];
