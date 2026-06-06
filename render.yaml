@@ -1,0 +1,18 @@
+# Render blueprint — single service that builds the web client and serves it
+# alongside the Socket.IO game server (same origin, no CORS, one URL).
+#
+# Deploy: push this repo to GitHub, then on render.com → "New" → "Blueprint"
+# and pick the repo. Render reads PORT automatically; the server uses it.
+services:
+  - type: web
+    name: tichu
+    runtime: node
+    plan: free
+    # --include=dev so Vite (a devDependency) is available to build the client.
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: '20'

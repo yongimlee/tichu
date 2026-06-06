@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tichu 덱 미리보기</title>
+    <style>
+      :root {
+        --bg: #11131a;
+        --surface: #1a1e27;
+        --border: rgba(255, 255, 255, 0.12);
+        --text: #e7eaf0;
+        --muted: #9aa3b2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, "Segoe UI", sans-serif;
+      }
+      h1 { margin: 0 0 0.25rem; font-size: 1.4rem; }
+      p.sub { margin: 0 0 2rem; color: var(--muted); }
+
+      section { margin-bottom: 2rem; }
+      .row-head {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+        margin-bottom: 0.6rem;
+      }
+      .row-head h2 { margin: 0; font-size: 1.05rem; }
+      .row-head .swatch {
+        width: 14px; height: 14px; border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.25);
+      }
+      .row-head small { color: var(--muted); }
+
+      .deck {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      /* ---- card styling mirrors web/src/styles.css ---- */
+      .card {
+        width: 64px;
+        height: 114px; /* matches special-card art aspect (256x455 ≈ 1:1.78) */
+        min-height: 0;
+        padding: 0.3rem;
+        border-radius: 7px;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        background: #f4f6fb;
+        color: #1a1e27;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: 700;
+      }
+      .card__rank { font-size: 1.5rem; align-self: flex-start; line-height: 1; }
+      .card__glyph { font-size: 1.7rem; }
+
+      .card--jade { color: #1a8f4c; }   /* green  */
+      .card--star { color: #d62828; }   /* red    */
+      .card--sword { color: #16181d; }  /* black  */
+      .card--pagoda { color: #2563c9; } /* blue   */
+
+      .card--special {
+        /* same white card box & size as normal cards — just art instead of rank/suit */
+        padding: 0;
+        overflow: hidden;
+      }
+      .card__img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tichu 덱 미리보기</h1>
+    <p class="sub">56장 전체 — 4 슈트 × (2–A) + 특수 카드 4장. 색상과 특수 카드 이미지를 확인하세요.</p>
+
+    <div id="root"></div>
+
+    <script>
+      const SUITS = [
+        { key: 'jade', name: '비취 (Jade)', glyph: '✿', color: '#1a8f4c' },
+        { key: 'star', name: '별 (Star)', glyph: '★', color: '#d62828' },
+        { key: 'sword', name: '검 (Sword)', glyph: '⚔', color: '#16181d' },
+        { key: 'pagoda', name: '탑 (Pagoda)', glyph: '⛩', color: '#2563c9' },
+      ];
+      const RANK_LABEL = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+      const SPECIALS = [
+        { name: 'mahjong', label: '참새 (1)', img: 'web/src/assets/cards/mahjong.png' },
+        { name: 'dog', label: '개', img: 'web/src/assets/cards/dog.png' },
+        { name: 'phoenix', label: '봉황', img: 'web/src/assets/cards/phoenix.png' },
+        { name: 'dragon', label: '용', img: 'web/src/assets/cards/dragon.png' },
+      ];
+
+      const root = document.getElementById('root');
+
+      for (const suit of SUITS) {
+        const section = document.createElement('section');
+        const head = document.createElement('div');
+        head.className = 'row-head';
+        head.innerHTML =
+          `<span class="swatch" style="background:${suit.color}"></span>` +
+          `<h2>${suit.name}</h2><small>${suit.color}</small>`;
+        section.appendChild(head);
+
+        const deck = document.createElement('div');
+        deck.className = 'deck';
+        for (let r = 2; r <= 14; r++) {
+          const label = RANK_LABEL[r] ?? String(r);
+          const card = document.createElement('div');
+          card.className = `card card--${suit.key}`;
+          card.innerHTML =
+            `<span class="card__rank">${label}</span>` +
+            `<span class="card__glyph">${suit.glyph}</span>`;
+          deck.appendChild(card);
+        }
+        section.appendChild(deck);
+        root.appendChild(section);
+      }
+
+      const specialSection = document.createElement('section');
+      specialSection.innerHTML = '<div class="row-head"><h2>특수 카드</h2><small>이미지</small></div>';
+      const sdeck = document.createElement('div');
+      sdeck.className = 'deck';
+      for (const sp of SPECIALS) {
+        const card = document.createElement('div');
+        card.className = 'card card--special';
+        card.innerHTML = `<img class="card__img" src="${sp.img}" alt="${sp.label}" />`;
+        sdeck.appendChild(card);
+      }
+      specialSection.appendChild(sdeck);
+      root.appendChild(specialSection);
+    </script>
+  </body>
+</html>

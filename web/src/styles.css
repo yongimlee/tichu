@@ -1,0 +1,820 @@
+:root {
+  --bg: #0f1115;
+  --surface: #1a1e27;
+  --surface-2: #232936;
+  --border: #2e3543;
+  --text: #e6e9ef;
+  --muted: #97a0b0;
+  --primary: #4f8cff;
+  --primary-ink: #ffffff;
+  --danger: #ff5d5d;
+  --accent: #ffd166;
+  --radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+  min-height: 100vh;
+}
+
+/* In-game screens get more horizontal room so the hand and table breathe. */
+.app--wide {
+  max-width: 1040px;
+}
+
+.app__header {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.app__title {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.app__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+/* Forms */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input[type='text'],
+input:not([type]) {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  flex: 1;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.tab--active {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+/* Choices (radio cards) */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.choice span {
+  display: flex;
+  flex-direction: column;
+}
+
+.choice small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Buttons */
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--primary);
+  color: var(--primary-ink);
+  width: 100%;
+}
+
+.btn--secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--primary);
+  width: 100%;
+}
+
+.btn--ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.btn--small {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+/* Invite */
+.invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.invite__label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.invite__code {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+}
+
+/* Teams */
+.teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.team__label {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.seat--filled {
+  border-style: solid;
+  background: var(--surface-2);
+}
+
+.seat--self {
+  border-color: var(--primary);
+}
+
+.seat__name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.seat__empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text);
+}
+
+.badge--self {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+/* Waiting list */
+.waiting__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.waiting__list li {
+  background: var(--surface-2);
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.hint {
+  text-align: center;
+  color: var(--muted);
+  margin: 0.25rem 0;
+}
+
+/* Toast */
+.toast {
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.toast--error {
+  background: rgba(255, 93, 93, 0.15);
+  border: 1px solid var(--danger);
+  color: #ffd0d0;
+}
+
+/* Game view */
+.game {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.phase h2 {
+  margin: 0 0 0.5rem;
+}
+
+.actions--row {
+  flex-direction: row;
+}
+
+/* Equal-width buttons in a row (overrides per-variant width: 100%). */
+.actions--row .btn {
+  flex: 1 1 0;
+  width: auto;
+}
+
+/* Mahjong wish picker — rank buttons instead of a text input. */
+.wishgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.wish-btn {
+  min-width: 40px;
+  font-weight: 700;
+}
+
+.wish-btn--on {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+/* Seat strip */
+.seatstrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.seatstrip__item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top-width: 4px; /* team-coloured accent stripe */
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* Team colours — partners (opposite seats) share a colour. */
+.seatstrip__item--team-a {
+  border-top-color: #38bd93; /* teal */
+}
+.seatstrip__item--team-b {
+  border-top-color: #e0794f; /* coral */
+}
+.seatstrip__item--team-a .seatstrip__team {
+  color: #38bd93;
+  font-weight: 700;
+}
+.seatstrip__item--team-b .seatstrip__team {
+  color: #e0794f;
+  font-weight: 700;
+}
+
+/* Self / turn use rings (box-shadow) so the team top-stripe stays visible. */
+.seatstrip__item.is-self {
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* Highlight the player whose turn it is — visible to everyone. */
+.seatstrip__item.is-turn {
+  background: rgba(255, 209, 102, 0.12);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.seatstrip__turn {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.seatstrip__rel {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+/* Captured-cards pile (mini cards) under each seat panel + in the scoreboard. */
+.seatstrip__captured {
+  margin-top: 0.4rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.35rem;
+}
+
+.seatstrip__points {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.capturepile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+
+.capturepile .card {
+  width: 22px;
+  height: 31px;
+  min-height: 0;
+  padding: 1px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: #f4f6fb;
+  color: #1a1e27;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  cursor: default;
+}
+
+.capturepile .card__rank {
+  font-size: 0.55rem;
+  line-height: 1;
+}
+.capturepile .card__glyph {
+  font-size: 0.55rem;
+}
+.capturepile .card--special {
+  padding: 0;
+}
+
+/* Scoreboard (scoring phase) — point cards glow and pop in, others dim. */
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.scoreboard__player {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-top-width: 4px;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+.scoreboard__player--team-a {
+  border-top-color: #38bd93;
+}
+.scoreboard__player--team-b {
+  border-top-color: #e0794f;
+}
+
+.scoreboard__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.scoreboard__pts {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+.capturepile__card {
+  display: inline-flex;
+}
+.capturepile__card.is-dim {
+  opacity: 0.3;
+}
+.capturepile__card.is-point {
+  animation: pointPop 0.45s ease both;
+}
+.capturepile__card.is-point .card {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 8px rgba(255, 209, 102, 0.7);
+}
+
+@keyframes pointPop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Face-down captured stack shown during play (hides which cards were won). */
+.cardbackstack {
+  display: flex;
+  justify-content: center;
+}
+
+.cardback {
+  width: 20px;
+  height: 28px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.1) 0 2px,
+      transparent 2px 5px
+    ),
+    linear-gradient(135deg, #3a5aa0, #22356a);
+  box-shadow: -1px 0 2px rgba(0, 0, 0, 0.45);
+}
+.cardback + .cardback {
+  margin-left: -12px;
+}
+
+/* Scoreboard rank badge + staggered row entrance. */
+.scoreboard__player {
+  animation: rowIn 0.45s ease both;
+}
+
+.scoreboard__rank {
+  font-size: 1.05rem;
+  display: inline-flex;
+  animation: pointPop 0.5s ease both;
+}
+
+/* Text ranks ("4등") read smaller than the medal emojis. */
+.scoreboard__rank--num {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  align-self: center;
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.seatstrip__name {
+  font-weight: 600;
+  margin: 0.15rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seatstrip__meta {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.badge--gt {
+  background: var(--accent);
+  color: #1a1e27;
+}
+
+/* Hand + cards */
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.75rem 0.5rem;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+}
+
+.hand .card,
+.trick__cards .card {
+  /* scoped to actual playing cards — must NOT match .card panels (e.g. .phase) */
+  width: 52px;
+  height: 93px; /* matches special-card art aspect (256x455 ≈ 1:1.78) */
+  min-height: 0;
+  padding: 0.3rem;
+  border-radius: 7px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: #f4f6fb;
+  color: #1a1e27;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.08s ease;
+}
+
+.card--selected {
+  outline: 3px solid var(--primary);
+  transform: translateY(-6px);
+}
+
+.card__rank {
+  font-size: 1.3rem;
+  align-self: flex-start;
+  line-height: 1;
+}
+
+.card__glyph {
+  font-size: 1.4rem;
+}
+
+/* Cards shown on the table (trick) are a touch smaller than the hand. */
+.trick__cards .card {
+  width: 46px;
+  height: 82px;
+  cursor: default;
+}
+
+.card__label {
+  font-size: 0.7rem;
+}
+
+/* Suit colours — .card.card--x raises specificity above the .hand .card box rule. */
+.card.card--jade {
+  color: #1a8f4c;
+}
+.card.card--star {
+  color: #d62828;
+}
+.card.card--sword {
+  color: #16181d;
+}
+.card.card--pagoda {
+  color: #2563c9;
+}
+.hand .card--special,
+.trick__cards .card--special {
+  /* same white card box & size as normal cards — art fills the frame */
+  padding: 0;
+  overflow: hidden;
+}
+.card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* Match bar */
+.matchbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+}
+
+.matchbar__team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+}
+
+.matchbar__label {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.matchbar__score {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.matchbar__mid {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.matchbar__target {
+  font-size: 0.7rem;
+}
+
+/* Scoring */
+.scoreline {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.phase--finished {
+  text-align: center;
+}
+
+.winner {
+  font-size: 1.4rem;
+  color: var(--accent);
+  margin: 0.5rem 0 1rem;
+}
+
+/* Playing */
+.phase__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.turntag {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.turntag--mine {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+.phase__inset {
+  background: var(--surface-2);
+  margin: 0.5rem 0;
+}
+
+.trick {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1.25rem;
+  margin: 0.5rem 0;
+  min-height: 120px;
+  padding: 1rem;
+  background: radial-gradient(circle at 50% 30%, #1f3d2e 0%, #16261d 70%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.trick__play {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0.55;
+}
+
+.trick__play.is-top {
+  opacity: 1;
+}
+
+.trick__who {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.trick__play.is-top .trick__who {
+  color: var(--accent);
+}
+
+.trick__cards {
+  display: flex;
+  gap: 0.3rem;
+}
+
+/* Exchange */
+.exchange {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.exchange__slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.exchange__slot select {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+@media (max-width: 480px) {
+  .teams {
+    grid-template-columns: 1fr;
+  }
+}

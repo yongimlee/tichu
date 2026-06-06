@@ -1,0 +1,24 @@
+{
+  "name": "tichu",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c green,cyan \"npm run dev -w @tichu/server\" \"npm run dev -w @tichu/web\"",
+    "dev:server": "npm run dev -w @tichu/server",
+    "dev:web": "npm run dev -w @tichu/web",
+    "build": "npm run build -w @tichu/web",
+    "start": "npm start -w @tichu/server",
+    "typecheck": "npm run typecheck -w @tichu/shared && npm run typecheck -w @tichu/server && npm run typecheck -w @tichu/web"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "concurrently": "^9.0.0",
+    "typescript": "^5.4.5"
+  }
+}
