@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  canBeat,
   cardPoints,
   detectCombination,
   nextSeat,
@@ -7,6 +8,8 @@ import {
   prevSeat,
   seatTeam,
   type Card,
+  type Combination,
+  type CombinationType,
   type PlayerView,
   type Room,
   type Seat,
@@ -328,6 +331,18 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
   const myTurn = view.turn === view.selfSeat && view.pendingDragon === null;
   const isLeading = view.trick.length === 0;
 
+  // Reconstruct the current top combo (the winning play) so we can suggest legal moves.
+  const topCombo = useMemo(() => {
+    if (isLeading) return null;
+    const p = [...view.trick].reverse().find((x) => x.seat === view.trickOwner);
+    return p ? detectCombination(p.cards) : null;
+  }, [view.trick, view.trickOwner, isLeading]);
+
+  const suggestions = useMemo(
+    () => (myTurn ? legalMoves(view.hand, topCombo) : []),
+    [myTurn, view.hand, topCombo],
+  );
+
   const toggle = (card: Card) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -402,6 +417,30 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
           <span className="hint">숫자를 누르면 소원 선택, 다시 누르면 해제(소원 없음).</span>
         </div>
       )}
+
+      {myTurn &&
+        (suggestions.length > 0 ? (
+          <div className="suggest">
+            <span className="suggest__label">추천 조합 — 누르면 자동 선택됩니다</span>
+            <div className="suggest__chips">
+              {suggestions.slice(0, 8).map((c, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="btn btn--small suggest__chip"
+                  onClick={() => setSelected(new Set(c.cards.map((card) => card.id)))}
+                >
+                  {comboLabel(c)}
+                </button>
+              ))}
+              {suggestions.length > 8 && (
+                <span className="suggest__more">외 {suggestions.length - 8}개</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          !isLeading && <p className="hint">🚫 낼 수 있는 조합이 없습니다 — 패스하세요.</p>
+        ))}
 
       <div className="actions actions--row">
         <button className="btn btn--primary" disabled={!canPlay} onClick={play}>
@@ -478,6 +517,51 @@ function isPhoenixSingle(cards: Card[]): boolean {
 
 function isDogSingle(cards: Card[]): boolean {
   return cards.length === 1 && cards[0].kind === 'special' && cards[0].name === 'dog';
+}
+
+const TYPE_LABEL: Record<CombinationType, string> = {
+  single: '싱글',
+  pair: '페어',
+  triple: '트리플',
+  fullhouse: '풀하우스',
+  straight: '스트레이트',
+  stairs: '계단',
+  bomb: '폭탄',
+  straightbomb: '스트레이트 폭탄',
+};
+
+function comboLabel(c: Combination): string {
+  const base = TYPE_LABEL[c.type];
+  const r = rankLabel(c.rank);
+  if (c.type === 'straight' || c.type === 'stairs' || c.type === 'straightbomb') {
+    return `${base} ~${r} (${c.length}장)`;
+  }
+  return `${base} ${r}`;
+}
+
+/**
+ * Legal plays from `hand` against the current `top` (null = leading). Brute-forces
+ * card subsets (hand ≤14) through the shared detector, dedupes by logical combo,
+ * and sorts cheapest-first (non-bombs, then lower rank, then fewer cards). A hint
+ * only — the server remains authoritative on the actual play.
+ */
+function legalMoves(hand: Card[], top: Combination | null): Combination[] {
+  const n = hand.length;
+  if (n === 0) return [];
+  const out: Combination[] = [];
+  const seen = new Set<string>();
+  for (let mask = 1; mask < 1 << n; mask++) {
+    const subset: Card[] = [];
+    for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(hand[i]);
+    const combo = detectCombination(subset);
+    if (!combo || !canBeat(combo, top)) continue;
+    const key = `${combo.type}:${combo.rank}:${combo.length}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(combo);
+  }
+  out.sort((a, b) => a.bombLevel - b.bombLevel || a.rank - b.rank || a.length - b.length);
+  return out;
 }
 
 function capturedPoints(cards: Card[]): number {

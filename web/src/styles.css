@@ -321,6 +321,36 @@ input:focus {
   width: auto;
 }
 
+/* Legal-move suggestions on your turn. */
+.suggest {
+  margin: 0.5rem 0;
+}
+
+.suggest__label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.suggest__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.suggest__chip {
+  background: var(--surface-2);
+  border: 1px solid var(--primary);
+  color: var(--text);
+}
+
+.suggest__more {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 /* Mahjong wish picker — rank buttons instead of a text input. */
 .wishgrid {
   display: flex;
