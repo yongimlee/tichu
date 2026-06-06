@@ -610,6 +610,16 @@ input:focus {
   color: #1a1e27;
 }
 
+.badge--offline {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* A disconnected player's panel is dimmed (but their seat & cards are kept). */
+.seatstrip__item.is-offline {
+  opacity: 0.55;
+}
+
 /* Hand + cards */
 .hand {
   display: flex;

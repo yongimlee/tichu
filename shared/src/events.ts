@@ -12,6 +12,8 @@ export interface JoinResult {
   room: Room;
   /** The caller's own player id, so the client can identify itself in `room.players`. */
   selfId: string;
+  /** Persistent reconnect token — store it client-side to rejoin after a drop. */
+  token: string;
 }
 
 export interface ServerToClientEvents {
@@ -28,6 +30,11 @@ export interface ClientToServerEvents {
   ) => void;
   'room:join': (
     payload: { code: string; nickname: string },
+    ack: (res: Ack<JoinResult>) => void,
+  ) => void;
+  /** Rejoin an existing room/seat after a disconnect using a saved token. */
+  'room:reconnect': (
+    payload: { code: string; token: string },
     ack: (res: Ack<JoinResult>) => void,
   ) => void;
   'room:setSeat': (payload: { seat: Seat | null }) => void;

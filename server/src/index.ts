@@ -45,8 +45,9 @@ const io = new Server<
   cors: { origin: CLIENT_ORIGIN },
 });
 
-const rooms = new RoomManager();
 const games = new GameManager();
+// Purge a room's game when the room itself is cleaned up (all players offline).
+const rooms = new RoomManager((code) => games.end(code));
 
 io.on('connection', (socket) => {
   registerSocketHandlers(io, socket, rooms, games);

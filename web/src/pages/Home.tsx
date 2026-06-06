@@ -3,7 +3,7 @@ import type { Ack, JoinResult, Room, TeamSelectionMode } from '@tichu/shared';
 import { socket } from '../socket';
 
 interface Props {
-  onJoined: (room: Room, selfId: string) => void;
+  onJoined: (room: Room, selfId: string, token: string) => void;
   onError: (message: string) => void;
 }
 
@@ -16,7 +16,7 @@ export function Home({ onJoined, onError }: Props) {
   const [teamMode, setTeamMode] = useState<TeamSelectionMode>('manual');
 
   const handleAck = (res: Ack<JoinResult>) => {
-    if (res.ok) onJoined(res.data.room, res.data.selfId);
+    if (res.ok) onJoined(res.data.room, res.data.selfId, res.data.token);
     else onError(res.error);
   };
 

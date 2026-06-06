@@ -6,6 +6,23 @@ import { RoomView } from './pages/RoomView';
 import { GameView } from './pages/GameView';
 import { Demo } from './pages/Demo';
 
+// Persisted reconnect session — lets us rejoin our seat after a drop/refresh.
+const SESSION_KEY = 'tichu.session';
+type Session = { code: string; token: string };
+function loadSession(): Session | null {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null') as Session | null;
+  } catch {
+    return null;
+  }
+}
+function saveSession(s: Session): void {
+  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+}
+function clearSession(): void {
+  localStorage.removeItem(SESSION_KEY);
+}
+
 export function App() {
   const [room, setRoom] = useState<Room | null>(null);
   const [view, setView] = useState<PlayerView | null>(null);
@@ -41,13 +58,37 @@ export function App() {
     return () => clearTimeout(t);
   }, [error]);
 
-  const handleJoined = (r: Room, id: string) => {
+  // On every (re)connect, if we hold a saved session, rejoin our seat. This
+  // covers a page refresh and an auto-reconnect after the network dropped.
+  useEffect(() => {
+    const tryReconnect = () => {
+      const s = loadSession();
+      if (!s) return;
+      socket.emit('room:reconnect', { code: s.code, token: s.token }, (res) => {
+        if (res.ok) {
+          setSelfId(res.data.selfId);
+          setRoom(res.data.room);
+        } else {
+          clearSession();
+        }
+      });
+    };
+    socket.on('connect', tryReconnect);
+    if (socket.connected) tryReconnect();
+    return () => {
+      socket.off('connect', tryReconnect);
+    };
+  }, []);
+
+  const handleJoined = (r: Room, id: string, token: string) => {
     setSelfId(id);
     setRoom(r);
+    saveSession({ code: r.code, token });
   };
 
   const handleLeave = () => {
     // Reconnecting drops our server-side room membership cleanly.
+    clearSession();
     socket.disconnect();
     socket.connect();
     setRoom(null);

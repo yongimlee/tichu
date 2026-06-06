@@ -83,10 +83,10 @@ export function registerSocketHandlers(
   socket.on('room:create', ({ nickname, teamSelectionMode }, ack) => {
     try {
       const name = sanitizeNickname(nickname);
-      const room = rooms.createRoom(socket.id, name, teamSelectionMode);
+      const { room, token } = rooms.createRoom(socket.id, name, teamSelectionMode);
       socket.join(room.code);
       socket.data.roomCode = room.code;
-      ack({ ok: true, data: { room, selfId: socket.id } });
+      ack({ ok: true, data: { room, selfId: socket.id, token } });
     } catch (err) {
       ack({ ok: false, error: errMessage(err) });
     }
@@ -95,11 +95,26 @@ export function registerSocketHandlers(
   socket.on('room:join', ({ code, nickname }, ack) => {
     try {
       const name = sanitizeNickname(nickname);
-      const room = rooms.joinRoom(socket.id, normalizeCode(code), name);
+      const { room, token } = rooms.joinRoom(socket.id, normalizeCode(code), name);
       socket.join(room.code);
       socket.data.roomCode = room.code;
-      ack({ ok: true, data: { room, selfId: socket.id } });
+      ack({ ok: true, data: { room, selfId: socket.id, token } });
       emitRoom(room.code);
+    } catch (err) {
+      ack({ ok: false, error: errMessage(err) });
+    }
+  });
+
+  socket.on('room:reconnect', ({ code, token }, ack) => {
+    try {
+      const { room } = rooms.reconnect(token, socket.id);
+      if (room.code !== normalizeCode(code)) throw new Error('세션 정보가 일치하지 않습니다.');
+      socket.join(room.code);
+      socket.data.roomCode = room.code;
+      ack({ ok: true, data: { room, selfId: socket.id, token } });
+      emitRoom(room.code);
+      // Restore the player's redacted game view if a game is in progress.
+      if (games.getState(room.code)) emitGameState(room);
     } catch (err) {
       ack({ ok: false, error: errMessage(err) });
     }
@@ -171,7 +186,7 @@ export function registerSocketHandlers(
   });
 
   socket.on('disconnect', () => {
-    const room = rooms.removePlayer(socket.id);
+    const room = rooms.disconnect(socket.id);
     if (room) emitRoom(room.code);
   });
 }

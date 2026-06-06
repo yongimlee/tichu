@@ -34,13 +34,19 @@ export function GameView({ view, room }: Props) {
     return (seat: Seat) => map.get(seat) ?? `자리 ${seat}`;
   }, [room.players]);
 
+  const connectedOf = useMemo(() => {
+    const map = new Map<Seat, boolean>();
+    for (const p of room.players) if (p.seat !== null) map.set(p.seat, p.connected);
+    return (seat: Seat) => map.get(seat) ?? true;
+  }, [room.players]);
+
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;
 
   return (
     <div className="game">
       <MatchBar view={view} />
-      <SeatStrip view={view} nameOf={nameOf} />
+      <SeatStrip view={view} nameOf={nameOf} connectedOf={connectedOf} />
 
       {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
       {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
@@ -162,7 +168,15 @@ function Finished({ view }: { view: PlayerView }) {
   );
 }
 
-function SeatStrip({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => string }) {
+function SeatStrip({
+  view,
+  nameOf,
+  connectedOf,
+}: {
+  view: PlayerView;
+  nameOf: (s: Seat) => string;
+  connectedOf: (s: Seat) => boolean;
+}) {
   const relation = (seat: Seat): string => {
     if (seat === view.selfSeat) return '나';
     if (seat === partnerSeat(view.selfSeat)) return '파트너';
@@ -174,18 +188,22 @@ function SeatStrip({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => st
       {view.seats.map((s) => {
         const isTurn = view.phase === 'playing' && s.seat === view.turn;
         const isDragon = view.phase === 'playing' && s.seat === view.pendingDragon;
+        const offline = !connectedOf(s.seat);
         const team = seatTeam(s.seat); // 'A' (seats 0·2) or 'B' (seats 1·3)
         return (
           <div
             key={s.seat}
             className={`seatstrip__item seatstrip__item--team-${team.toLowerCase()}${
               s.seat === view.selfSeat ? ' is-self' : ''
-            }${isTurn || isDragon ? ' is-turn' : ''}`}
+            }${isTurn || isDragon ? ' is-turn' : ''}${offline ? ' is-offline' : ''}`}
           >
             <div className="seatstrip__rel">
               <span className="seatstrip__team">팀 {team}</span> · {relation(s.seat)}
             </div>
-            <div className="seatstrip__name">{nameOf(s.seat)}</div>
+            <div className="seatstrip__name">
+              {nameOf(s.seat)}
+              {offline && <span className="badge badge--offline">오프라인</span>}
+            </div>
             <div className="seatstrip__meta">
               🂠 {s.handCount}
               {s.grandTichu && <span className="badge badge--gt">LT</span>}
