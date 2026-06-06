@@ -110,8 +110,18 @@ const CAPTURED: Card[][] = [
 const CAPTURED_MID: Card[][] = [
   [],
   [],
-  [suit('pagoda', 5), suit('jade', 4)], // 5
-  [suit('star', 10), suit('sword', 6)], // 10
+  [suit('pagoda', 5), suit('jade', 4)], // small pile → one row
+  // a bigger pile → wraps to two rows of face-down backs
+  [
+    suit('star', 10),
+    suit('sword', 6),
+    suit('jade', 2),
+    suit('jade', 3),
+    suit('jade', 4),
+    suit('pagoda', 7),
+    suit('pagoda', 8),
+    suit('star', 9),
+  ],
 ];
 
 const match = { scores: { A: 120, B: 85 }, target: 1000, handNumber: 3, winner: null } as const;

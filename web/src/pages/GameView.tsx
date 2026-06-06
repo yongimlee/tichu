@@ -640,13 +640,24 @@ function capturedPoints(cards: Card[]): number {
   return cards.reduce((total, card) => total + cardPoints(card), 0);
 }
 
-/** A face-down, overlapping stack hinting at how many cards a player has won. */
+/**
+ * A face-down, overlapping stack hinting at how many cards a player has won.
+ * Capped at 10 backs and wrapped into rows of 5 so a big pile can't widen the
+ * panel and reflow the seat grid on mobile.
+ */
 function CardBackStack({ count }: { count: number }) {
-  const shown = Math.min(count, 12);
+  const shown = Math.min(count, 10);
+  const perRow = 5;
+  const rows: number[] = [];
+  for (let i = 0; i < shown; i += perRow) rows.push(Math.min(perRow, shown - i));
   return (
     <div className="cardbackstack" title={`${count}장`}>
-      {Array.from({ length: shown }, (_, i) => (
-        <span key={i} className="cardback" />
+      {rows.map((n, r) => (
+        <div key={r} className="cardbackstack__row">
+          {Array.from({ length: n }, (_, i) => (
+            <span key={i} className="cardback" />
+          ))}
+        </div>
       ))}
     </div>
   );

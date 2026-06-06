@@ -602,6 +602,13 @@ input:focus {
 /* Face-down captured stack shown during play (hides which cards were won). */
 .cardbackstack {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cardbackstack__row {
+  display: flex;
   justify-content: center;
 }
 
