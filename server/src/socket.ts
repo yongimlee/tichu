@@ -2,12 +2,14 @@ import type { Server, Socket } from 'socket.io';
 import {
   declareGrandTichu,
   declareTichu,
+  EMOTES,
   giveDragon,
   pass,
   playCards,
   submitExchange,
   toPlayerView,
   type ClientToServerEvents,
+  type Emote,
   type GameState,
   type InterServerEvents,
   type Room,
@@ -183,6 +185,20 @@ export function registerSocketHandlers(
     } catch (err) {
       socket.emit('room:error', { message: errMessage(err) });
     }
+  });
+
+  socket.on('game:emote', ({ emoji }) => {
+    // Validate against the shared set; silently ignore junk, unseated players,
+    // and bursts faster than the cooldown (no error toast for emotes).
+    if (!EMOTES.includes(emoji as Emote)) return;
+    const now = Date.now();
+    if (now - (socket.data.lastEmoteAt ?? 0) < 700) return;
+    const room = rooms.getRoomBySocket(socket.id);
+    if (!room) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player || player.seat === null) return;
+    socket.data.lastEmoteAt = now;
+    io.to(room.code).emit('game:emote', { seat: player.seat, emoji });
   });
 
   socket.on('disconnect', () => {

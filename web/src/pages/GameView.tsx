@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   canBeat,
   cardPoints,
   detectCombination,
+  EMOTES,
   nextSeat,
   partnerSeat,
   prevSeat,
@@ -40,19 +41,56 @@ export function GameView({ view, room }: Props) {
     return (seat: Seat) => map.get(seat) ?? true;
   }, [room.players]);
 
+  // Transient emote bubbles per seat. `key` lets the same seat re-trigger the
+  // pop animation (React remounts the bubble when the key changes).
+  const [emotes, setEmotes] = useState<Partial<Record<Seat, { emoji: string; key: number }>>>({});
+  const showEmote = useCallback((seat: Seat, emoji: string) => {
+    const key = Date.now() + Math.random();
+    setEmotes((prev) => ({ ...prev, [seat]: { emoji, key } }));
+    setTimeout(() => {
+      setEmotes((prev) => (prev[seat]?.key === key ? { ...prev, [seat]: undefined } : prev));
+    }, 3000);
+  }, []);
+  useEffect(() => {
+    const onEmote = ({ seat, emoji }: { seat: Seat; emoji: string }) => showEmote(seat, emoji);
+    socket.on('game:emote', onEmote);
+    return () => {
+      socket.off('game:emote', onEmote);
+    };
+  }, [showEmote]);
+  const emoteOf = (seat: Seat) => emotes[seat];
+  const sendEmote = (emoji: string) => {
+    socket.emit('game:emote', { emoji });
+    showEmote(view.selfSeat, emoji); // optimistic — instant feedback (and works in the demo)
+  };
+
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;
 
   return (
     <div className="game">
       <MatchBar view={view} />
-      <SeatStrip view={view} nameOf={nameOf} connectedOf={connectedOf} />
+      <SeatStrip view={view} nameOf={nameOf} connectedOf={connectedOf} emoteOf={emoteOf} />
 
       {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
       {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
       {view.phase === 'playing' && <Playing view={view} nameOf={nameOf} />}
       {view.phase === 'scoring' && <Scoring view={view} isHost={isHost} nameOf={nameOf} />}
       {view.phase === 'finished' && <Finished view={view} />}
+
+      <EmoteBar onEmote={sendEmote} />
+    </div>
+  );
+}
+
+function EmoteBar({ onEmote }: { onEmote: (emoji: string) => void }) {
+  return (
+    <div className="emotebar">
+      {EMOTES.map((emoji) => (
+        <button key={emoji} type="button" className="emotebar__btn" onClick={() => onEmote(emoji)}>
+          {emoji}
+        </button>
+      ))}
     </div>
   );
 }
@@ -172,10 +210,12 @@ function SeatStrip({
   view,
   nameOf,
   connectedOf,
+  emoteOf,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   connectedOf: (s: Seat) => boolean;
+  emoteOf: (s: Seat) => { emoji: string; key: number } | undefined;
 }) {
   const relation = (seat: Seat): string => {
     if (seat === view.selfSeat) return '나';
@@ -189,6 +229,7 @@ function SeatStrip({
         const isTurn = view.phase === 'playing' && s.seat === view.turn;
         const isDragon = view.phase === 'playing' && s.seat === view.pendingDragon;
         const offline = !connectedOf(s.seat);
+        const emote = emoteOf(s.seat);
         const team = seatTeam(s.seat); // 'A' (seats 0·2) or 'B' (seats 1·3)
         return (
           <div
@@ -197,6 +238,11 @@ function SeatStrip({
               s.seat === view.selfSeat ? ' is-self' : ''
             }${isTurn || isDragon ? ' is-turn' : ''}${offline ? ' is-offline' : ''}`}
           >
+            {emote && (
+              <span key={emote.key} className="seatstrip__emote">
+                {emote.emoji}
+              </span>
+            )}
             <div className="seatstrip__rel">
               <span className="seatstrip__team">팀 {team}</span> · {relation(s.seat)}
             </div>
@@ -579,6 +625,8 @@ function legalMoves(hand: Card[], top: Combination | null): Combination[] {
     for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(hand[i]);
     const combo = detectCombination(subset);
     if (!combo || !canBeat(combo, top)) continue;
+    // Don't suggest spending the Phoenix as a plain single — it's a waste of the wildcard.
+    if (combo.type === 'single' && isPhoenixSingle(combo.cards)) continue;
     const key = `${combo.type}:${combo.rank}:${combo.length}`;
     if (seen.has(key)) continue;
     seen.add(key);

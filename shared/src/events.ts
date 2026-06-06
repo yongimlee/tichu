@@ -21,6 +21,8 @@ export interface ServerToClientEvents {
   'room:error': (payload: { message: string }) => void;
   /** Per-seat redacted game state. Sent individually to each player. */
   'game:state': (view: PlayerView) => void;
+  /** An emote reaction from a seated player, broadcast to the whole room. */
+  'game:emote': (payload: { seat: Seat; emoji: string }) => void;
 }
 
 export interface ClientToServerEvents {
@@ -52,6 +54,7 @@ export interface ClientToServerEvents {
   'game:pass': () => void;
   'game:giveDragon': (payload: { toSeat: Seat }) => void;
   'game:nextHand': () => void;
+  'game:emote': (payload: { emoji: string }) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -59,4 +62,6 @@ export interface InterServerEvents {}
 
 export interface SocketData {
   roomCode?: string;
+  /** Timestamp of the last emote, for light anti-spam rate limiting. */
+  lastEmoteAt?: number;
 }

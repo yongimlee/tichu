@@ -376,6 +376,7 @@ input:focus {
 }
 
 .seatstrip__item {
+  position: relative; /* anchor for the emote bubble */
   background: var(--surface);
   border: 1px solid var(--border);
   border-top-width: 4px; /* team-coloured accent stripe */
@@ -383,6 +384,68 @@ input:focus {
   padding: 0.5rem;
   text-align: center;
   font-size: 0.8rem;
+}
+
+/* Emote reaction bubble that pops over a player's panel and floats away. */
+.seatstrip__emote {
+  position: absolute;
+  top: -16px;
+  right: -4px;
+  font-size: 1.7rem;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  animation: emoteIn 3s ease forwards;
+}
+
+@keyframes emoteIn {
+  0% {
+    transform: scale(0.3) translateY(8px);
+    opacity: 0;
+  }
+  12% {
+    transform: scale(1.25) translateY(0);
+    opacity: 1;
+  }
+  24% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(-12px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Emote picker bar at the bottom of the game screen. */
+.emotebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.emotebar__btn {
+  font-size: 1.4rem;
+  line-height: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.08s ease;
+}
+
+.emotebar__btn:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
 }
 
 /* Team colours — partners (opposite seats) share a colour. */
