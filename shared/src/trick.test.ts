@@ -143,6 +143,29 @@ test('the Mahjong wish is recorded and cleared when the rank is played', () => {
   assert.equal(s.wish, null);
 });
 
+test('a trick whose winner just went out is still awarded to them and closes', () => {
+  // seat 0 leads its last card (out), seat 1 beats it with its last card (out),
+  // then seats 2 & 3 pass. The trick must close and go to seat 1 (the winner),
+  // with the lead handed to the next active player.
+  const s = playing([[c(2)], [c(9)], [c(4), c(5)], [c(6), c(7)]], 0);
+  playCards(s, 0, ['jade-2']); // seat 0 plays its last card → out
+  assert.deepEqual(s.finished, [0]);
+  playCards(s, 1, ['jade-9']); // seat 1 beats it with its last card → out, owns the trick
+  assert.deepEqual(s.finished, [0, 1]);
+  assert.equal(s.turn, 2);
+
+  pass(s, 2);
+  pass(s, 3); // everyone after the (now out) winner has passed
+
+  assert.equal(s.trick.top, null, 'the trick closes instead of looping forever');
+  assert.deepEqual(
+    s.captured[1].map((x) => x.id).sort(),
+    ['jade-2', 'jade-9'],
+    'the winner (seat 1) collects the trick even though they are out',
+  );
+  assert.equal(s.turn, 2, 'the lead passes to the next active player');
+});
+
 test('an active wish forces a player to play the wished rank when able', () => {
   const s = playing([[c(5), c(2)], [c(8), c(9)], [c(3)], [c(4)]], 0);
   s.wish = 8; // pretend the Mahjong already wished for 8

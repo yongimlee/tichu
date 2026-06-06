@@ -386,12 +386,23 @@ function resolveExchange(state: GameState): void {
 
 /** Advance to the next player, or close the trick if it has come back around. */
 function advanceOrClose(state: GameState, from: Seat): void {
-  const next = nextActiveSeat(state, from);
-  if (next === null || next === from || next === state.trick.owner) {
-    closeTrick(state);
-  } else {
-    state.turn = next;
+  // Walk clockwise from `from`. If we reach the trick owner's seat before any
+  // other active player, the trick has come back around → close it. We must
+  // check the owner's seat directly (not via nextActiveSeat) because an owner
+  // who went out on their winning play has no cards and would be skipped,
+  // leaving the trick open forever.
+  for (let i = 1; i <= 4; i++) {
+    const seat = ((from + i) % 4) as Seat;
+    if (seat === state.trick.owner) {
+      closeTrick(state);
+      return;
+    }
+    if (state.players[seat].hand.length > 0) {
+      state.turn = seat;
+      return;
+    }
   }
+  closeTrick(state); // no active players remain (defensive)
 }
 
 function closeTrick(state: GameState): void {
