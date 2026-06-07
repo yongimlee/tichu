@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import type { Ack, JoinResult, Room, TeamSelectionMode } from '@tichu/shared';
+import {
+  DEFAULT_TARGET,
+  TARGET_OPTIONS,
+  type Ack,
+  type JoinResult,
+  type Room,
+  type TeamSelectionMode,
+} from '@tichu/shared';
 import { socket } from '../socket';
 
 interface Props {
@@ -14,6 +21,7 @@ export function Home({ onJoined, onError }: Props) {
   const [nickname, setNickname] = useState('');
   const [code, setCode] = useState('');
   const [teamMode, setTeamMode] = useState<TeamSelectionMode>('manual');
+  const [targetScore, setTargetScore] = useState<number>(DEFAULT_TARGET);
 
   const handleAck = (res: Ack<JoinResult>) => {
     if (res.ok) onJoined(res.data.room, res.data.selfId, res.data.token);
@@ -22,7 +30,7 @@ export function Home({ onJoined, onError }: Props) {
 
   const createRoom = () => {
     if (!nickname.trim()) return onError('닉네임을 입력해주세요.');
-    socket.emit('room:create', { nickname, teamSelectionMode: teamMode }, handleAck);
+    socket.emit('room:create', { nickname, teamSelectionMode: teamMode, targetScore }, handleAck);
   };
 
   const joinRoom = () => {
@@ -89,6 +97,20 @@ export function Home({ onJoined, onError }: Props) {
                 </span>
               </label>
             </div>
+          </div>
+          <div className="field">
+            <label htmlFor="target">목표 점수</label>
+            <select
+              id="target"
+              value={targetScore}
+              onChange={(e) => setTargetScore(Number(e.target.value))}
+            >
+              {TARGET_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}점
+                </option>
+              ))}
+            </select>
           </div>
           <button className="btn btn--primary" onClick={createRoom}>
             방 만들기

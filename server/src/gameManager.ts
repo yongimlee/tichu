@@ -1,4 +1,4 @@
-import { startHand, type GameState, type MatchInfo, type TeamId } from '@tichu/shared';
+import { DEFAULT_TARGET, startHand, type GameState, type MatchInfo, type TeamId } from '@tichu/shared';
 import { cryptoRandom } from './rng';
 
 // Holds the authoritative match for each in-progress room: the cumulative team
@@ -6,11 +6,10 @@ import { cryptoRandom } from './rng';
 // from RoomManager (lobby) so hands — which contain every player's cards —
 // never ride along on the lobby broadcast.
 
-const TARGET = 1000;
-
 interface MatchRecord {
   state: GameState;
   scores: { A: number; B: number };
+  target: number; // points needed to win this match (chosen at room creation)
   handNumber: number;
   winner: TeamId | null;
   settledHand: number; // handNumber whose result has already been added to scores
@@ -19,10 +18,11 @@ interface MatchRecord {
 export class GameManager {
   private matches = new Map<string, MatchRecord>();
 
-  start(code: string): GameState {
+  start(code: string, target: number = DEFAULT_TARGET): GameState {
     const record: MatchRecord = {
       state: startHand(cryptoRandom),
       scores: { A: 0, B: 0 },
+      target,
       handNumber: 1,
       winner: null,
       settledHand: 0,
@@ -38,7 +38,7 @@ export class GameManager {
   getMatchInfo(code: string): MatchInfo | undefined {
     const r = this.matches.get(code);
     if (!r) return undefined;
-    return { scores: r.scores, target: TARGET, handNumber: r.handNumber, winner: r.winner };
+    return { scores: r.scores, target: r.target, handNumber: r.handNumber, winner: r.winner };
   }
 
   /** Apply the finished hand's result to the match scores exactly once. */
@@ -53,7 +53,7 @@ export class GameManager {
     r.settledHand = r.handNumber;
 
     const { A, B } = r.scores;
-    if ((A >= TARGET || B >= TARGET) && A !== B) {
+    if ((A >= r.target || B >= r.target) && A !== B) {
       r.winner = A > B ? 'A' : 'B';
       r.state.phase = 'finished';
     }

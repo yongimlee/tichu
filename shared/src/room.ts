@@ -42,11 +42,25 @@ export interface Player {
 
 export type RoomStatus = 'lobby' | 'in-game' | 'finished';
 
+// Selectable match goals (points needed to win), chosen by the host at creation.
+export const MIN_TARGET = 100;
+export const MAX_TARGET = 1000;
+export const DEFAULT_TARGET = 1000;
+export const TARGET_OPTIONS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+
+/** Clamp/normalise a requested target score to a valid value. */
+export function normalizeTarget(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) return DEFAULT_TARGET;
+  const rounded = Math.round(value);
+  return Math.min(MAX_TARGET, Math.max(MIN_TARGET, rounded));
+}
+
 export interface Room {
   code: string; // invite code shared with guests
   hostId: string;
   status: RoomStatus;
   teamSelectionMode: TeamSelectionMode;
+  targetScore: number; // points needed to win the match (100–1000)
   players: Player[];
   createdAt: number;
 }

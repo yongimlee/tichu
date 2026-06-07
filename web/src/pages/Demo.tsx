@@ -42,6 +42,7 @@ const room: Room = {
   hostId: 'p0',
   status: 'in-game',
   teamSelectionMode: 'manual',
+  targetScore: 500,
   createdAt: Date.now(),
   players: NAMES.map((nickname, i) => ({
     id: `p${i}`,
@@ -58,6 +59,7 @@ const lobbyManual: Room = {
   hostId: 'p0',
   status: 'lobby',
   teamSelectionMode: 'manual',
+  targetScore: 500,
   createdAt: Date.now(),
   players: [
     { id: 'p0', nickname: '세호', seat: 0, isHost: true, connected: true },
@@ -73,6 +75,7 @@ const lobbyRandom: Room = {
   hostId: 'p0',
   status: 'lobby',
   teamSelectionMode: 'random',
+  targetScore: 1000,
   createdAt: Date.now(),
   players: NAMES.map((nickname, i) => ({
     id: `p${i}`,
@@ -124,7 +127,7 @@ const CAPTURED_MID: Card[][] = [
   ],
 ];
 
-const match = { scores: { A: 120, B: 85 }, target: 1000, handNumber: 3, winner: null } as const;
+const match = { scores: { A: 120, B: 85 }, target: 500, handNumber: 3, winner: null } as const;
 
 // In-game scenarios: the real phases plus a "Mahjong lead" view (pick a wish)
 // and a "Dragon trick" view (choose who receives the won trick).

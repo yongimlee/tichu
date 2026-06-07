@@ -37,6 +37,7 @@ export function RoomView({ room, selfId, onLeave }: Props) {
         <div>
           <div className="invite__label">초대 코드</div>
           <div className="invite__code">{room.code}</div>
+          <div className="invite__meta">목표 {room.targetScore}점</div>
         </div>
         <button className="btn btn--ghost" onClick={copyCode}>
           코드 복사

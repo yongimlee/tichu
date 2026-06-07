@@ -409,12 +409,28 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
     [myTurn, view.hand, topCombo],
   );
 
+  // While a single is on the table, default to picking one card at a time —
+  // but still allow stacking same-rank cards (the only way to beat it: a bomb).
+  const singleTrick = !isLeading && topCombo?.type === 'single';
+
   const toggle = (card: Card) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(card.id)) next.delete(card.id);
-      else next.add(card.id);
-      return next;
+      if (next.has(card.id)) {
+        next.delete(card.id);
+        return next;
+      }
+      if (!singleTrick) {
+        next.add(card.id);
+        return next;
+      }
+      // Single trick: keep one selected unless the new card matches the rank of
+      // the current selection (building a four-of-a-kind bomb).
+      const sel = view.hand.filter((c) => prev.has(c.id));
+      const rank = card.kind === 'suit' ? card.rank : null;
+      const sameRank =
+        rank !== null && sel.length > 0 && sel.every((c) => c.kind === 'suit' && c.rank === rank);
+      return sameRank ? new Set([...prev, card.id]) : new Set([card.id]);
     });
   };
 

@@ -27,7 +27,7 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   'room:create': (
-    payload: { nickname: string; teamSelectionMode: TeamSelectionMode },
+    payload: { nickname: string; teamSelectionMode: TeamSelectionMode; targetScore: number },
     ack: (res: Ack<JoinResult>) => void,
   ) => void;
   'room:join': (

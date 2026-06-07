@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   ALL_SEATS,
   MAX_PLAYERS,
+  normalizeTarget,
   shuffle,
   type Player,
   type Room,
@@ -52,6 +53,7 @@ export class RoomManager {
     socketId: string,
     nickname: string,
     teamSelectionMode: TeamSelectionMode,
+    targetScore: number,
   ): { room: Room; token: string } {
     const host: Player = {
       id: socketId,
@@ -65,6 +67,7 @@ export class RoomManager {
       hostId: socketId,
       status: 'lobby',
       teamSelectionMode,
+      targetScore: normalizeTarget(targetScore),
       players: [host],
       createdAt: Date.now(),
     };
