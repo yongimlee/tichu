@@ -224,7 +224,7 @@ function renderScenario(scenario: Scenario) {
     case 'lobby-random':
       return <RoomView room={lobbyRandom} selfId="p0" onLeave={noop} />;
     default:
-      return <GameView view={buildView(scenario)} room={room} />;
+      return <GameView view={buildView(scenario)} room={room} onLeave={noop} />;
   }
 }
 

@@ -196,6 +196,17 @@ export class RoomManager {
     return room;
   }
 
+  /** Dissolve a room entirely: drop its players, tokens, mappings, and timer. */
+  closeRoom(code: string): void {
+    const room = this.rooms.get(code);
+    if (room) for (const player of room.players) this.deleteTokenFor(player);
+    for (const [socketId, c] of this.playerRooms) {
+      if (c === code) this.playerRooms.delete(socketId);
+    }
+    this.cancelCleanup(code);
+    this.rooms.delete(code);
+  }
+
   private scheduleCleanup(code: string): void {
     if (this.cleanupTimers.has(code)) return;
     const timer = setTimeout(() => this.purgeIfAllOffline(code), this.graceMs);

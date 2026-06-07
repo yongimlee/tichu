@@ -23,6 +23,8 @@ export interface ServerToClientEvents {
   'game:state': (view: PlayerView) => void;
   /** An emote reaction from a seated player, broadcast to the whole room. */
   'game:emote': (payload: { seat: Seat; emoji: string }) => void;
+  /** The room was closed (e.g. host dissolved it) — clients should return home. */
+  'room:closed': () => void;
 }
 
 export interface ClientToServerEvents {
@@ -55,6 +57,12 @@ export interface ClientToServerEvents {
   'game:giveDragon': (payload: { toSeat: Seat }) => void;
   'game:nextHand': () => void;
   'game:emote': (payload: { emoji: string }) => void;
+  /** Host: reset scores and redeal, keeping the same players (post-game restart). */
+  'game:restart': () => void;
+  /** Host: dissolve the whole room (everyone returns home). */
+  'room:close': () => void;
+  /** Leave the current room (room is purged once everyone has left). */
+  'room:leave': () => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

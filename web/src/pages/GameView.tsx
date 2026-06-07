@@ -21,6 +21,7 @@ import { CardChip, cardText } from '../components/CardChip';
 interface Props {
   view: PlayerView;
   room: Room;
+  onLeave: () => void;
 }
 
 // Selectable ranks for a Mahjong wish (2..14); face cards show J/Q/K/A.
@@ -28,7 +29,7 @@ const WISH_RANKS = Array.from({ length: 13 }, (_, i) => i + 2);
 const RANK_FACE: Record<number, string> = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 const rankLabel = (r: number) => RANK_FACE[r] ?? String(r);
 
-export function GameView({ view, room }: Props) {
+export function GameView({ view, room, onLeave }: Props) {
   const nameOf = useMemo(() => {
     const map = new Map<Seat, string>();
     for (const p of room.players) if (p.seat !== null) map.set(p.seat, p.nickname);
@@ -76,7 +77,7 @@ export function GameView({ view, room }: Props) {
       {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
       {view.phase === 'playing' && <Playing view={view} nameOf={nameOf} />}
       {view.phase === 'scoring' && <Scoring view={view} isHost={isHost} nameOf={nameOf} />}
-      {view.phase === 'finished' && <Finished view={view} />}
+      {view.phase === 'finished' && <Finished view={view} isHost={isHost} onLeave={onLeave} />}
 
       <EmoteBar onEmote={sendEmote} />
     </div>
@@ -188,7 +189,15 @@ function Scoring({
   );
 }
 
-function Finished({ view }: { view: PlayerView }) {
+function Finished({
+  view,
+  isHost,
+  onLeave,
+}: {
+  view: PlayerView;
+  isHost: boolean;
+  onLeave: () => void;
+}) {
   const { scores, winner } = view.match;
   return (
     <section className="card phase phase--finished">
@@ -201,6 +210,23 @@ function Finished({ view }: { view: PlayerView }) {
       <div className="scoreline">
         <span>팀 B</span>
         <strong>{scores.B}</strong>
+      </div>
+
+      {!isHost && <p className="hint">방장이 다시 시작하거나 새 방을 열 수 있어요.</p>}
+      <div className="actions actions--row">
+        {isHost && (
+          <>
+            <button className="btn btn--primary" onClick={() => socket.emit('game:restart')}>
+              처음부터 다시 시작
+            </button>
+            <button className="btn btn--secondary" onClick={() => socket.emit('room:close')}>
+              새 방 만들기
+            </button>
+          </>
+        )}
+        <button className="btn btn--ghost" onClick={onLeave}>
+          방 나가기
+        </button>
       </div>
     </section>
   );

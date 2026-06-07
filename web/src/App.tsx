@@ -41,13 +41,22 @@ export function App() {
     const onUpdate = (r: Room) => setRoom(r);
     const onError = (p: { message: string }) => setError(p.message);
     const onGameState = (v: PlayerView) => setView(v);
+    const onClosed = () => {
+      // Room was dissolved (host closed it) — drop everything and go home.
+      clearSession();
+      setRoom(null);
+      setView(null);
+      setSelfId('');
+    };
     socket.on('room:update', onUpdate);
     socket.on('room:error', onError);
     socket.on('game:state', onGameState);
+    socket.on('room:closed', onClosed);
     return () => {
       socket.off('room:update', onUpdate);
       socket.off('room:error', onError);
       socket.off('game:state', onGameState);
+      socket.off('room:closed', onClosed);
     };
   }, []);
 
@@ -87,10 +96,8 @@ export function App() {
   };
 
   const handleLeave = () => {
-    // Reconnecting drops our server-side room membership cleanly.
+    socket.emit('room:leave'); // server removes us (and purges the room if empty)
     clearSession();
-    socket.disconnect();
-    socket.connect();
     setRoom(null);
     setView(null);
     setSelfId('');
@@ -110,7 +117,7 @@ export function App() {
         {hash === '#demo' ? (
           <Demo />
         ) : room && view ? (
-          <GameView view={view} room={room} />
+          <GameView view={view} room={room} onLeave={handleLeave} />
         ) : room ? (
           <RoomView room={room} selfId={selfId} onLeave={handleLeave} />
         ) : (

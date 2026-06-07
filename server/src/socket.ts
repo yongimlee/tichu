@@ -187,6 +187,45 @@ export function registerSocketHandlers(
     }
   });
 
+  socket.on('game:restart', () => {
+    try {
+      const room = rooms.getRoomBySocket(socket.id);
+      if (!room) throw new Error('참여 중인 방이 없습니다.');
+      if (room.hostId !== socket.id) throw new Error('방장만 다시 시작할 수 있습니다.');
+      games.start(room.code, room.targetScore); // fresh match, scores reset to 0
+      emitRoom(room.code);
+      emitGameState(room);
+    } catch (err) {
+      socket.emit('room:error', { message: errMessage(err) });
+    }
+  });
+
+  socket.on('room:close', () => {
+    try {
+      const room = rooms.getRoomBySocket(socket.id);
+      if (!room) throw new Error('참여 중인 방이 없습니다.');
+      if (room.hostId !== socket.id) throw new Error('방장만 방을 닫을 수 있습니다.');
+      const code = room.code;
+      io.to(code).emit('room:closed'); // notify everyone before tearing it down
+      io.in(code).socketsLeave(code);
+      games.end(code);
+      rooms.closeRoom(code);
+    } catch (err) {
+      socket.emit('room:error', { message: errMessage(err) });
+    }
+  });
+
+  socket.on('room:leave', () => {
+    const code = rooms.getRoomBySocket(socket.id)?.code;
+    const room = rooms.removePlayer(socket.id);
+    if (code) socket.leave(code);
+    if (room) {
+      emitRoom(room.code); // others see the updated roster
+    } else if (code) {
+      games.end(code); // the room emptied out — drop its game too
+    }
+  });
+
   socket.on('game:emote', ({ emoji }) => {
     // Validate against the shared set; silently ignore junk, unseated players,
     // and bursts faster than the cooldown (no error toast for emotes).
