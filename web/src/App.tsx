@@ -118,7 +118,7 @@ export function App() {
       <header className="app__header">
         <h1 className="app__title">TICHU</h1>
         <div className="pat">
-          {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다 😊</div>}
+          {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다😊💕</div>}
           <button
             type="button"
             className="pat-btn"
