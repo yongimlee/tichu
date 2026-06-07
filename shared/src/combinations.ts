@@ -138,6 +138,7 @@ function detectSingle(cards: Card[]): Combination | null {
 
 /** Pair (size 2) or triple (size 3), Phoenix allowed to fill one card. */
 function detectSameRank(cards: Card[], size: 2 | 3): Combination | null {
+  if (cards.some(isMahjong)) return null; // Mahjong is single/straight only, never paired
   const phoenixCount = cards.filter(isPhoenix).length;
   if (phoenixCount > 1) return null;
   const others = cards.filter((c) => !isPhoenix(c));
@@ -180,6 +181,7 @@ function detectStraightBomb(cards: Card[]): Combination | null {
 /** Full house: a triple plus a pair (5 cards). Compared by the triple's rank. */
 function detectFullHouse(cards: Card[], opts: DetectOptions): Combination | null {
   if (cards.length !== 5) return null;
+  if (cards.some(isMahjong)) return null; // Mahjong can't form the pair/triple of a full house
   const phoenixCount = cards.filter(isPhoenix).length;
   if (phoenixCount > 1) return null;
 
@@ -246,6 +248,7 @@ function detectStraight(cards: Card[], opts: DetectOptions): Combination | null 
 /** Stairs: 2+ consecutive pairs (even length 4+). Phoenix fills one card. */
 function detectStairs(cards: Card[]): Combination | null {
   if (cards.length < 4 || cards.length % 2 !== 0) return null;
+  if (cards.some(isMahjong)) return null; // Mahjong can't be one of the paired ranks in stairs
   const phoenixCount = cards.filter(isPhoenix).length;
   if (phoenixCount > 1) return null;
 
@@ -287,6 +290,10 @@ function isSpecial(c: Card, name: SpecialName): boolean {
 
 function isPhoenix(c: Card): boolean {
   return isSpecial(c, 'phoenix');
+}
+
+function isMahjong(c: Card): boolean {
+  return isSpecial(c, 'mahjong');
 }
 
 function isPhoenixSingle(combo: Combination): boolean {

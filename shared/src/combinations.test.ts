@@ -35,6 +35,9 @@ test('pairs and triples (incl. Phoenix)', () => {
   assert.equal(detect([c(9), c(9, 'star'), c(9, 'sword')]).type, 'triple');
   assert.equal(detect([c(9), c(9, 'star'), PHOENIX]).type, 'triple');
   assert.equal(detectCombination([c(9), c(8)]), null);
+  // Mahjong is single/straight only — it can never be paired (incl. with Phoenix).
+  assert.equal(detectCombination([MAHJONG, PHOENIX]), null);
+  assert.equal(detectCombination([MAHJONG, c(2)]), null);
 });
 
 test('full house', () => {
@@ -56,6 +59,10 @@ test('straights (incl. Mahjong low end and Phoenix gap)', () => {
   const gap = detect([c(4), c(5, 'star'), PHOENIX, c(7), c(8, 'star')]); // Phoenix fills the 6
   assert.equal(gap.type, 'straight');
   assert.equal(gap.rank, 8);
+  // Mahjong + Phoenix together IS legal inside a straight (1·2·3·4·Phoenix).
+  const mp = detect([MAHJONG, c(2), c(3, 'star'), c(4), PHOENIX]);
+  assert.equal(mp.type, 'straight');
+  assert.equal(mp.rank, 5);
   assert.equal(detectCombination([c(4), c(5), c(6), c(7)]), null); // too short
 });
 
@@ -63,6 +70,9 @@ test('stairs', () => {
   assert.equal(detect([c(5), c(5, 'star'), c(6), c(6, 'star')]).type, 'stairs');
   assert.equal(detect([c(5), c(5, 'star'), c(6), PHOENIX]).type, 'stairs');
   assert.equal(detectCombination([c(5), c(5, 'star'), c(8), c(8, 'star')]), null); // not consecutive
+  // Mahjong can't supply a paired rank in stairs or a full house.
+  assert.equal(detectCombination([MAHJONG, PHOENIX, c(2), c(2, 'star')]), null);
+  assert.equal(detectCombination([MAHJONG, PHOENIX, c(8), c(8, 'star'), c(8, 'sword')]), null);
 });
 
 test('bombs', () => {
