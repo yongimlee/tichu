@@ -1,8 +1,8 @@
 import type { Server } from 'socket.io';
 import {
   canBeat,
+  cardPoints,
   declareGrandTichu,
-  declareTichu,
   detectCombination,
   giveDragon,
   nextSeat,
@@ -75,6 +75,39 @@ function enumerateMoves(hand: Card[], top: Combination | null): Combination[] {
   return out;
 }
 
+/**
+ * Legal beating combos that *contain a card of the wished rank*, cheapest first.
+ * Mirrors the engine's `canFulfillWish` enumeration so the bot's idea of "can I
+ * fulfil the wish" never disagrees with the rule check — important because
+ * `enumerateMoves` dedups by shape and could otherwise hide the fulfilling
+ * variant behind a same-shaped non-fulfilling one.
+ */
+function fulfillingMoves(hand: Card[], top: Combination | null, wish: number): Combination[] {
+  const n = hand.length;
+  const out: Combination[] = [];
+  const seen = new Set<string>();
+  for (let mask = 1; mask < 1 << n; mask++) {
+    const subset: Card[] = [];
+    let hasWish = false;
+    for (let i = 0; i < n; i++) {
+      if (mask & (1 << i)) {
+        subset.push(hand[i]);
+        if (concreteRank(hand[i]) === wish) hasWish = true;
+      }
+    }
+    if (!hasWish) continue;
+    const combo = detectCombination(subset);
+    if (!combo || !canBeat(combo, top)) continue;
+    if (isPhoenixSingle(combo)) continue;
+    const key = `${combo.type}:${combo.rank}:${combo.length}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(combo);
+  }
+  out.sort((a, b) => a.bombLevel - b.bombLevel || a.rank - b.rank || a.length - b.length);
+  return out;
+}
+
 type SuitCard = Extract<Card, { kind: 'suit' }>;
 
 /** Card ids that belong to a bomb (four of a kind / straight flush) in `hand`. */
@@ -113,12 +146,62 @@ function bombCardIds(hand: Card[]): Set<string> {
   return ids;
 }
 
+const DRAGON_RANK = 15;
+const ACE_RANK = 14;
+
+/** Total point value of the cards currently sitting in the trick. */
+function trickPoints(state: GameState): number {
+  return state.trick.plays.reduce(
+    (total, p) => total + p.combo.cards.reduce((s, c) => s + cardPoints(c), 0),
+    0,
+  );
+}
+
+function isMahjong(c: Card): boolean {
+  return c.kind === 'special' && c.name === 'mahjong';
+}
+
+/**
+ * Choose a lead. Goal: shed many cards at once while keeping high cards and
+ * bombs for control. So among bomb-preserving non-bomb leads we drop the
+ * *longest* combo, breaking ties by the *lowest* rank, and we avoid leading a
+ * bare control single (Dragon / Ace) while better options exist. Returns null
+ * only when the hand has no ordinary lead (all bombs / Phoenix), letting the
+ * caller fall back.
+ */
+function chooseLead(moves: Combination[], bombs: Set<string>): Combination | null {
+  const nonBomb = moves.filter((m) => m.bombLevel === 0);
+  if (!nonBomb.length) return null;
+
+  const keepsBomb = (m: Combination) => m.cards.every((c) => !bombs.has(c.id));
+  let pool = nonBomb.filter(keepsBomb);
+  if (!pool.length) pool = nonBomb;
+
+  // Hold back a lone Dragon/Ace early — they are better spent winning a trick.
+  const isControlSingle = (m: Combination) => m.type === 'single' && m.rank >= ACE_RANK;
+  const open = pool.filter((m) => !isControlSingle(m));
+  const finalPool = open.length ? open : pool;
+
+  finalPool.sort((a, b) => b.length - a.length || a.rank - b.rank);
+  return finalPool[0];
+}
+
+/**
+ * A Mahjong wish: pressure the table to spend a high card we don't hold, so we
+ * never bind ourselves. Returns undefined when we hold every high rank.
+ */
+function chooseWish(hand: Card[]): number | undefined {
+  const have = new Set(hand.filter((c): c is SuitCard => c.kind === 'suit').map((c) => c.rank));
+  for (let r = ACE_RANK; r >= 10; r--) if (!have.has(r)) return r;
+  return undefined;
+}
+
 /**
  * Decide a bot's play. Priorities: go out if possible → don't beat your own
- * partner → don't break up a bomb → otherwise the cheapest beating combo (or
- * pass / bomb only when the wish forces it).
+ * partner → don't break up a bomb → conserve the Dragon on cheap tricks →
+ * otherwise the cheapest beating combo (or pass / bomb only when forced).
  */
-function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true } {
+function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; wish?: number } {
   const hand = state.players[seat].hand;
   const top = state.trick.top;
   const leading = !top;
@@ -126,7 +209,7 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true }
   let moves = enumerateMoves(hand, top);
   let mustPlayForWish = false;
   if (state.wish !== null) {
-    const fulfilling = moves.filter((m) => m.cards.some((c) => concreteRank(c) === state.wish));
+    const fulfilling = fulfillingMoves(hand, top, state.wish);
     if (fulfilling.length > 0) {
       moves = fulfilling;
       mustPlayForWish = true;
@@ -137,7 +220,7 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true }
   const goOut = moves.filter((m) => m.cards.length === hand.length);
   if (goOut.length) {
     const pick = goOut.find((m) => m.bombLevel === 0) ?? goOut[0];
-    return { play: pick.cards.map((c) => c.id) };
+    return withWish(pick, hand);
   }
 
   // Don't beat your partner if they're currently winning the trick.
@@ -147,22 +230,39 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true }
 
   // Prefer moves that don't break a bomb apart.
   const bombs = bombCardIds(hand);
-  const keepsBomb = (m: Combination) =>
-    m.bombLevel > 0 || m.cards.every((c) => !bombs.has(c.id));
+  const keepsBomb = (m: Combination) => m.bombLevel > 0 || m.cards.every((c) => !bombs.has(c.id));
   const pool = moves.filter(keepsBomb);
   const usable = pool.length ? pool : moves;
   const nonBomb = usable.filter((m) => m.bombLevel === 0);
 
   if (leading) {
-    const pick = nonBomb[0] ?? usable[0];
-    if (pick) return { play: pick.cards.map((c) => c.id) };
+    const pick = chooseLead(usable, bombs) ?? nonBomb[0] ?? usable[0];
+    if (pick) return withWish(pick, hand);
     const dog = hand.find((c) => c.kind === 'special' && c.name === 'dog');
     return { play: [(dog ?? hand[0]).id] };
   }
 
-  if (nonBomb[0]) return { play: nonBomb[0].cards.map((c) => c.id) };
+  const cheapest = nonBomb[0];
+  if (cheapest) {
+    // Hold the Dragon rather than burn it on a near-worthless trick.
+    const spendsDragon = cheapest.type === 'single' && cheapest.rank >= DRAGON_RANK;
+    if (spendsDragon && !mustPlayForWish && trickPoints(state) < 10 && hand.length > 4) {
+      return { pass: true };
+    }
+    return { play: cheapest.cards.map((c) => c.id) };
+  }
   if (mustPlayForWish && usable[0]) return { play: usable[0].cards.map((c) => c.id) };
   return { pass: true }; // can't beat cheaply (or only have a bomb) → hold
+}
+
+/** Attach a Mahjong wish to the play when the chosen combo leads the Mahjong. */
+function withWish(pick: Combination, hand: Card[]): { play: string[]; wish?: number } {
+  const play = pick.cards.map((c) => c.id);
+  if (pick.cards.some(isMahjong)) {
+    const wish = chooseWish(hand);
+    if (wish !== undefined) return { play, wish };
+  }
+  return { play };
 }
 
 /** Give the Dragon-won trick to the opponent who is furthest from going out. */
@@ -172,12 +272,11 @@ function chooseDragonTarget(state: GameState, seat: Seat): Seat {
   return state.players[left].hand.length >= state.players[right].hand.length ? left : right;
 }
 
-/** A bot declares a (conservative) small Tichu only with a very strong hand. */
-function wantsTichu(hand: Card[]): boolean {
-  const hasBomb = bombCardIds(hand).size > 0;
-  const hasDragon = hand.some((c) => c.kind === 'special' && c.name === 'dragon');
-  return hasBomb && hasDragon;
-}
+// Note: bots do NOT declare a (small or grand) Tichu. Simulation showed that a
+// solo fill-bot — which can't coordinate with its partner to push a declaration
+// — goes out first well under 50% of the time even on its strongest hands, so
+// the +/-100/200 stake is negative EV at any meaningful frequency. A smart bot
+// simply doesn't make a losing bet; it focuses on play quality instead.
 
 /**
  * Exchange: give the two lowest cards to the opponents and a high card to the
@@ -229,27 +328,18 @@ export function pendingBotAction(room: Room, state: GameState): BotAction | null
 export function applyBotAction(action: BotAction, state: GameState): void {
   switch (action.type) {
     case 'grand':
-      declareGrandTichu(state, action.seat, false);
+      declareGrandTichu(state, action.seat, false); // bots never gamble the stake
       break;
-    case 'exchange': {
-      const hand = state.players[action.seat].hand;
-      if (wantsTichu(hand)) {
-        try {
-          declareTichu(state, action.seat); // declare before passing cards
-        } catch {
-          /* not eligible — ignore */
-        }
-      }
-      submitExchange(state, action.seat, chooseExchange(hand));
+    case 'exchange':
+      submitExchange(state, action.seat, chooseExchange(state.players[action.seat].hand));
       break;
-    }
     case 'dragon':
       giveDragon(state, action.seat, chooseDragonTarget(state, action.seat));
       break;
     case 'move': {
       const m = botMove(state, action.seat);
       if (m.pass) pass(state, action.seat);
-      else playCards(state, action.seat, m.play ?? []);
+      else playCards(state, action.seat, m.play ?? [], m.wish !== undefined ? { wish: m.wish } : {});
       break;
     }
   }
