@@ -21,6 +21,9 @@ const CODE_LENGTH = 6;
 
 // Grace period before an all-offline room is purged (lets brief drops recover).
 const CLEANUP_GRACE_MS = 60_000;
+// A room with a single human (the rest bots) isn't worth holding open long when
+// that human drops — just enough to survive a page refresh / momentary blip.
+const SOLO_CLEANUP_GRACE_MS = 10_000;
 
 export class RoomManager {
   private rooms = new Map<string, Room>();
@@ -196,8 +199,12 @@ export class RoomManager {
     const player = room.players.find((p) => p.id === socketId);
     if (player) player.connected = false;
     // If no human is online any more, schedule a delayed purge (bots don't count).
-    if (room.players.filter((p) => !p.isBot).every((p) => !p.connected)) {
-      this.scheduleCleanup(room.code);
+    // A solo human (rest are bots) gets only a short grace so an abandoned
+    // bots-only room is cleared quickly, while still surviving a page refresh.
+    const humans = room.players.filter((p) => !p.isBot);
+    if (humans.every((p) => !p.connected)) {
+      const grace = humans.length <= 1 ? Math.min(this.graceMs, SOLO_CLEANUP_GRACE_MS) : this.graceMs;
+      this.scheduleCleanup(room.code, grace);
     }
     return room;
   }
@@ -238,9 +245,9 @@ export class RoomManager {
     this.rooms.delete(code);
   }
 
-  private scheduleCleanup(code: string): void {
+  private scheduleCleanup(code: string, graceMs: number = this.graceMs): void {
     if (this.cleanupTimers.has(code)) return;
-    const timer = setTimeout(() => this.purgeIfAllOffline(code), this.graceMs);
+    const timer = setTimeout(() => this.purgeIfAllOffline(code), graceMs);
     timer.unref?.(); // don't keep the process alive just for this timer
     this.cleanupTimers.set(code, timer);
   }
