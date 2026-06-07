@@ -43,6 +43,10 @@ export interface ClientToServerEvents {
   ) => void;
   'room:setSeat': (payload: { seat: Seat | null }) => void;
   'room:randomizeTeams': () => void;
+  /** Host: add a fill bot to an empty seat. */
+  'room:addBot': () => void;
+  /** Host: remove a bot by its player id. */
+  'room:removeBot': (payload: { playerId: string }) => void;
   'game:start': () => void;
   'game:grandTichu': (payload: { declare: boolean }) => void;
   'game:exchange': (payload: ExchangeSelection) => void;

@@ -38,6 +38,7 @@ export interface Player {
   seat: Seat | null; // null = joined but not yet seated
   isHost: boolean;
   connected: boolean;
+  isBot?: boolean; // a server-controlled fill player
 }
 
 export type RoomStatus = 'lobby' | 'in-game' | 'finished';

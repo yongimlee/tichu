@@ -11,6 +11,7 @@ import type {
   ServerToClientEvents,
   SocketData,
 } from '@tichu/shared';
+import { BotDriver } from './bot';
 import { GameManager } from './gameManager';
 import { RoomManager } from './roomManager';
 import { registerSocketHandlers } from './socket';
@@ -48,9 +49,10 @@ const io = new Server<
 const games = new GameManager();
 // Purge a room's game when the room itself is cleaned up (all players offline).
 const rooms = new RoomManager((code) => games.end(code));
+const bots = new BotDriver(io, rooms, games);
 
 io.on('connection', (socket) => {
-  registerSocketHandlers(io, socket, rooms, games);
+  registerSocketHandlers(io, socket, rooms, games, bots);
 });
 
 httpServer.listen(PORT, () => {

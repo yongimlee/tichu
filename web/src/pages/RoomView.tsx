@@ -60,12 +60,21 @@ export function RoomView({ room, selfId, onLeave }: Props) {
                     <>
                       <span className="seat__name">
                         {player.nickname}
+                        {player.isBot && <span className="badge">봇</span>}
                         {player.isHost && <span className="badge">방장</span>}
                         {isSelf && <span className="badge badge--self">나</span>}
                       </span>
                       {isManual && isSelf && (
                         <button className="btn btn--small" onClick={stand}>
                           일어서기
+                        </button>
+                      )}
+                      {player.isBot && isHost && (
+                        <button
+                          className="btn btn--small"
+                          onClick={() => socket.emit('room:removeBot', { playerId: player.id })}
+                        >
+                          내보내기
                         </button>
                       )}
                     </>
@@ -98,6 +107,11 @@ export function RoomView({ room, selfId, onLeave }: Props) {
       )}
 
       <section className="actions">
+        {isHost && seatedCount < 4 && (
+          <button className="btn btn--secondary" onClick={() => socket.emit('room:addBot')}>
+            봇 추가
+          </button>
+        )}
         {!isManual && isHost && (
           <button className="btn btn--secondary" onClick={randomize}>
             팀 랜덤 배정

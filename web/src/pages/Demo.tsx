@@ -64,7 +64,7 @@ const lobbyManual: Room = {
   players: [
     { id: 'p0', nickname: '세호', seat: 0, isHost: true, connected: true },
     { id: 'p1', nickname: '민준', seat: 1, isHost: false, connected: true },
-    { id: 'p2', nickname: '지우', seat: null, isHost: false, connected: true },
+    { id: 'bot-1', nickname: '봇 1', seat: 2, isHost: false, connected: true, isBot: true },
     { id: 'p3', nickname: '하린', seat: null, isHost: false, connected: true },
   ],
 };

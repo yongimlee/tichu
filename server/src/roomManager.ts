@@ -129,6 +129,32 @@ export class RoomManager {
     return room;
   }
 
+  /** Host adds a fill bot, seating it in the lowest free seat (lobby only). */
+  addBot(socketId: string): Room {
+    const room = this.requireRoom(socketId);
+    if (room.status !== 'lobby') throw new Error('게임 시작 전에만 봇을 추가할 수 있습니다.');
+    if (room.players.length >= MAX_PLAYERS) throw new Error('방이 가득 찼습니다.');
+    const seat = ALL_SEATS.find((s) => !room.players.some((p) => p.seat === s));
+    if (seat === undefined) throw new Error('빈 자리가 없습니다.');
+    const n = room.players.filter((p) => p.isBot).length + 1;
+    room.players.push({
+      id: `bot-${randomUUID()}`,
+      nickname: `봇 ${n}`,
+      seat,
+      isHost: false,
+      connected: true,
+      isBot: true,
+    });
+    return room;
+  }
+
+  removeBot(socketId: string, playerId: string): Room {
+    const room = this.requireRoom(socketId);
+    if (room.status !== 'lobby') throw new Error('게임 시작 전에만 봇을 제거할 수 있습니다.');
+    room.players = room.players.filter((p) => !(p.id === playerId && p.isBot));
+    return room;
+  }
+
   randomizeTeams(socketId: string): Room {
     const room = this.requireRoom(socketId);
     if (room.hostId !== socketId) throw new Error('방장만 팀을 배정할 수 있습니다.');
@@ -169,8 +195,10 @@ export class RoomManager {
     this.playerRooms.delete(socketId);
     const player = room.players.find((p) => p.id === socketId);
     if (player) player.connected = false;
-    // If everyone is now offline, schedule a delayed purge of the dead room.
-    if (room.players.every((p) => !p.connected)) this.scheduleCleanup(room.code);
+    // If no human is online any more, schedule a delayed purge (bots don't count).
+    if (room.players.filter((p) => !p.isBot).every((p) => !p.connected)) {
+      this.scheduleCleanup(room.code);
+    }
     return room;
   }
 
@@ -184,14 +212,17 @@ export class RoomManager {
     const leaving = room.players.find((p) => p.id === socketId);
     if (leaving) this.deleteTokenFor(leaving);
     room.players = room.players.filter((p) => p.id !== socketId);
-    if (room.players.length === 0) {
-      this.rooms.delete(code);
+    const humans = room.players.filter((p) => !p.isBot);
+    if (humans.length === 0) {
+      // No humans left (empty, or bots only) → dissolve the room and its game.
+      this.closeRoom(code);
+      this.onCleanup?.(code);
       return undefined;
     }
-    // Promote a new host if the host left.
+    // Promote a new (human) host if the host left.
     if (room.hostId === socketId) {
-      room.hostId = room.players[0].id;
-      room.players[0].isHost = true;
+      room.hostId = humans[0].id;
+      humans[0].isHost = true;
     }
     return room;
   }
@@ -226,7 +257,7 @@ export class RoomManager {
     this.cleanupTimers.delete(code);
     const room = this.rooms.get(code);
     if (!room) return;
-    if (room.players.some((p) => p.connected)) return; // someone reconnected in time
+    if (room.players.some((p) => !p.isBot && p.connected)) return; // a human reconnected in time
     for (const player of room.players) this.deleteTokenFor(player);
     this.rooms.delete(code);
     this.onCleanup?.(code); // let the server drop the associated game

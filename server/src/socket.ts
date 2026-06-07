@@ -19,6 +19,7 @@ import {
 } from '@tichu/shared';
 import type { RoomManager } from './roomManager';
 import type { GameManager } from './gameManager';
+import type { BotDriver } from './bot';
 
 export type TichuServer = Server<
   ClientToServerEvents,
@@ -40,6 +41,7 @@ export function registerSocketHandlers(
   socket: TichuSocket,
   rooms: RoomManager,
   games: GameManager,
+  bots: BotDriver,
 ): void {
   const emitRoom = (code: string) => {
     const room = rooms.getRoom(code);
@@ -77,6 +79,7 @@ export function registerSocketHandlers(
       fn(ctx);
       games.settle(ctx.room.code);
       emitGameState(ctx.room);
+      bots.kick(ctx.room.code);
     } catch (err) {
       socket.emit('room:error', { message: errMessage(err) });
     }
@@ -116,7 +119,10 @@ export function registerSocketHandlers(
       ack({ ok: true, data: { room, selfId: socket.id, token } });
       emitRoom(room.code);
       // Restore the player's redacted game view if a game is in progress.
-      if (games.getState(room.code)) emitGameState(room);
+      if (games.getState(room.code)) {
+        emitGameState(room);
+        bots.kick(room.code);
+      }
     } catch (err) {
       ack({ ok: false, error: errMessage(err) });
     }
@@ -140,12 +146,37 @@ export function registerSocketHandlers(
     }
   });
 
+  socket.on('room:addBot', () => {
+    try {
+      const room = rooms.getRoomBySocket(socket.id);
+      if (!room) throw new Error('참여 중인 방이 없습니다.');
+      if (room.hostId !== socket.id) throw new Error('방장만 봇을 추가할 수 있습니다.');
+      rooms.addBot(socket.id);
+      emitRoom(room.code);
+    } catch (err) {
+      socket.emit('room:error', { message: errMessage(err) });
+    }
+  });
+
+  socket.on('room:removeBot', ({ playerId }) => {
+    try {
+      const room = rooms.getRoomBySocket(socket.id);
+      if (!room) throw new Error('참여 중인 방이 없습니다.');
+      if (room.hostId !== socket.id) throw new Error('방장만 봇을 제거할 수 있습니다.');
+      rooms.removeBot(socket.id, playerId);
+      emitRoom(room.code);
+    } catch (err) {
+      socket.emit('room:error', { message: errMessage(err) });
+    }
+  });
+
   socket.on('game:start', () => {
     try {
       const room = rooms.startGame(socket.id);
       emitRoom(room.code);
       games.start(room.code, room.targetScore);
       emitGameState(room);
+      bots.kick(room.code);
     } catch (err) {
       socket.emit('room:error', { message: errMessage(err) });
     }
@@ -182,6 +213,7 @@ export function registerSocketHandlers(
       if (room.hostId !== socket.id) throw new Error('방장만 다음 판을 시작할 수 있습니다.');
       games.nextHand(room.code);
       emitGameState(room);
+      bots.kick(room.code);
     } catch (err) {
       socket.emit('room:error', { message: errMessage(err) });
     }
@@ -195,6 +227,7 @@ export function registerSocketHandlers(
       games.start(room.code, room.targetScore); // fresh match, scores reset to 0
       emitRoom(room.code);
       emitGameState(room);
+      bots.kick(room.code);
     } catch (err) {
       socket.emit('room:error', { message: errMessage(err) });
     }
