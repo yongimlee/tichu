@@ -88,7 +88,11 @@ const lobbyRandom: Room = {
 
 const NO_CAPTURE: Card[][] = [[], [], [], []];
 
-function seats(handCounts: number[], captured: Card[][] = NO_CAPTURE): PublicSeatState[] {
+function seats(
+  handCounts: number[],
+  captured: Card[][] = NO_CAPTURE,
+  handReveal: Card[][] = NO_CAPTURE,
+): PublicSeatState[] {
   return ([0, 1, 2, 3] as Seat[]).map((seat) => ({
     seat,
     handCount: handCounts[seat],
@@ -99,6 +103,7 @@ function seats(handCounts: number[], captured: Card[][] = NO_CAPTURE): PublicSea
     hasPlayed: false,
     finished: false,
     captured: captured[seat],
+    handReveal: handReveal[seat],
   }));
 }
 
@@ -186,13 +191,16 @@ function buildView(scenario: GameScenario): PlayerView {
         ],
         trickOwner: 3,
       };
-    case 'scoring':
+    case 'scoring': {
+      // seat3 is the last player out → their leftover hand is revealed to everyone.
+      const leftover: Card[][] = [[], [], [], [suit('sword', 14), suit('jade', 10), DRAGON]];
       return {
         ...base,
-        seats: seats([0, 0, 0, 0], CAPTURED),
+        seats: seats([0, 0, 0, 3], CAPTURED, leftover),
         finished: [1, 0, 2], // out-order → seat3 is last (1등 민준 · 2등 세호 · 3등 지우 · 4등 하린)
         result: { teamScores: { A: 125, B: -25 }, doubleVictory: false, firstOut: 1 },
       };
+    }
     case 'finished':
       return { ...base, match: { ...match, scores: { A: 1010, B: 640 }, winner: 'A' } };
     default:

@@ -296,6 +296,7 @@ export interface PublicSeatState {
   hasPlayed: boolean;
   finished: boolean;
   captured: Card[]; // cards won in tricks so far (public — all were played face-up)
+  handReveal: Card[]; // leftover hand cards, revealed only in the scoring phase (else empty)
 }
 
 export interface ViewTrickPlay {
@@ -335,6 +336,9 @@ export function toPlayerView(state: GameState, seat: Seat, match: MatchInfo): Pl
       hasPlayed: p.hasPlayed,
       finished: state.finished.includes(p.seat),
       captured: state.captured[p.seat],
+      // At hand's end every player's remaining cards are public knowledge (the
+      // loser's leftover hand goes to the opponents), so reveal them in scoring.
+      handReveal: state.phase === 'scoring' ? p.hand : [],
     })),
     turn: state.turn,
     leader: state.leader,

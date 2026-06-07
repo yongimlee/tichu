@@ -190,7 +190,10 @@ function Scoring({
   return (
     <section className="card phase">
       <h2>이번 판 결과</h2>
-      <p className="hint">각자 트릭에서 딴 카드입니다 — ✨ 빛나는 카드가 점수 카드예요.</p>
+      <p className="hint">
+        각자 트릭에서 딴 카드입니다 — ✨ 빛나는 카드가 점수 카드예요. 마지막까지 남은 플레이어의
+        손패도 공개됩니다.
+      </p>
 
       <div className="scoreboard">
         {view.seats.map((s, i) => {
@@ -216,6 +219,14 @@ function Scoring({
                 <CapturePile cards={s.captured} highlight />
               ) : (
                 <p className="hint">딴 카드 없음</p>
+              )}
+              {s.handReveal.length > 0 && (
+                <div className="scoreboard__leftover">
+                  <span className="scoreboard__leftover-label">
+                    남은 손패 ({s.handReveal.length}장)
+                  </span>
+                  <CapturePile cards={s.handReveal} highlight />
+                </div>
               )}
             </div>
           );

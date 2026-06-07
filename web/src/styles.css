@@ -622,6 +622,18 @@ input:focus {
   color: var(--accent);
 }
 
+.scoreboard__leftover {
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border);
+}
+.scoreboard__leftover-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted, #94a0b8);
+  margin-bottom: 0.3rem;
+}
+
 .capturepile__card {
   display: inline-flex;
 }
