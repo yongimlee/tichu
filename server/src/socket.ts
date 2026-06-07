@@ -253,7 +253,8 @@ export function registerSocketHandlers(
     const room = rooms.removePlayer(socket.id);
     if (code) socket.leave(code);
     if (room) {
-      emitRoom(room.code); // others see the updated roster
+      emitRoom(room.code); // others see the updated roster (+ any new host)
+      bots.kick(room.code); // a seat may now be a bot whose turn it is
     } else if (code) {
       games.end(code); // the room emptied out — drop its game too
     }

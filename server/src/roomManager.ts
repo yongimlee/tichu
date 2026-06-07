@@ -198,6 +198,7 @@ export class RoomManager {
     this.playerRooms.delete(socketId);
     const player = room.players.find((p) => p.id === socketId);
     if (player) player.connected = false;
+    this.ensureHumanHost(room); // if the host dropped, hand it to an online human
     // If no human is online any more, schedule a delayed purge (bots don't count).
     // A solo human (rest are bots) gets only a short grace so an abandoned
     // bots-only room is cleared quickly, while still surviving a page refresh.
@@ -217,20 +218,26 @@ export class RoomManager {
     if (!room) return undefined;
 
     const leaving = room.players.find((p) => p.id === socketId);
-    if (leaving) this.deleteTokenFor(leaving);
-    room.players = room.players.filter((p) => p.id !== socketId);
-    const humans = room.players.filter((p) => !p.isBot);
-    if (humans.length === 0) {
+    if (!leaving) return room;
+    this.deleteTokenFor(leaving); // leaving for good → no reconnect
+
+    const humansLeft = room.players.filter((p) => !p.isBot && p.id !== socketId);
+    if (humansLeft.length === 0) {
       // No humans left (empty, or bots only) → dissolve the room and its game.
       this.closeRoom(code);
       this.onCleanup?.(code);
       return undefined;
     }
-    // Promote a new (human) host if the host left.
-    if (room.hostId === socketId) {
-      room.hostId = humans[0].id;
-      humans[0].isHost = true;
+
+    if (room.status !== 'lobby' && leaving.seat !== null) {
+      // Mid-game: hand the vacated seat to a bot so the others can keep playing.
+      this.convertToBot(leaving);
+    } else {
+      // Lobby (or an unseated spectator): just drop them.
+      room.players = room.players.filter((p) => p.id !== socketId);
     }
+
+    this.ensureHumanHost(room); // host must always be a connected human
     return room;
   }
 
@@ -274,6 +281,25 @@ export class RoomManager {
     const token = randomUUID();
     this.tokens.set(token, { code, player });
     return token;
+  }
+
+  /** Turn a departed human's seat into a bot so the hand can continue. */
+  private convertToBot(player: Player): void {
+    player.isBot = true;
+    player.isHost = false;
+    player.connected = true;
+    player.id = `bot-${randomUUID()}`; // the old socket id is gone
+    if (!player.nickname.endsWith('(봇)')) player.nickname = `${player.nickname} (봇)`;
+  }
+
+  /** Ensure the host is a connected human; hand it off if the current one isn't. */
+  private ensureHumanHost(room: Room): void {
+    const current = room.players.find((p) => p.id === room.hostId);
+    if (current && !current.isBot && current.connected) return;
+    const next = room.players.find((p) => !p.isBot && p.connected);
+    if (!next) return; // nobody online to receive it (cleanup will handle the room)
+    room.hostId = next.id;
+    for (const p of room.players) p.isHost = p.id === next.id;
   }
 
   private deleteTokenFor(player: Player): void {
