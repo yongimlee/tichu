@@ -9,6 +9,14 @@ const SERVER_URL =
 
 // Note the generic order: client emits ClientToServerEvents and listens for
 // ServerToClientEvents (the reverse of the server's declaration).
+//
+// transports: try WebSocket first instead of Socket.IO's default
+// "long-poll then upgrade". On mobile networks the upgrade is often delayed or
+// blocked, leaving the socket stuck on long-polling — and polling only delivers
+// server-pushed events (an opponent's move) on the next poll round-trip, which
+// shows up as laggy real-time updates. Listing 'websocket' first connects over
+// WS immediately; 'polling' stays as a fallback for networks that block WS.
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SERVER_URL, {
   autoConnect: true,
+  transports: ['websocket', 'polling'],
 });
