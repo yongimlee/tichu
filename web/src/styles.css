@@ -69,21 +69,23 @@ body {
 }
 .pat-toast {
   position: absolute;
-  bottom: calc(100% + 0.35rem);
+  top: calc(100% + 0.35rem);
   right: 0;
+  z-index: 5;
   white-space: nowrap;
-  font-size: 0.7rem;
-  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 8px;
-  background: rgba(56, 189, 147, 0.15);
+  background: var(--surface);
   border: 1px solid var(--accent);
   color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: patPop 0.18s ease both;
 }
 @keyframes patPop {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(-4px);
   }
 }
 .pat-btn:hover {
