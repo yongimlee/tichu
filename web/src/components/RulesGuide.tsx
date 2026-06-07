@@ -1,3 +1,31 @@
+import type { Card, SpecialName, Suit } from '@tichu/shared';
+import { CardChip } from './CardChip';
+
+// Example-card builders (display only — ids just need to be unique within a row).
+const s = (suit: Suit, rank: number): Card => ({ kind: 'suit', suit, rank, id: `${suit}-${rank}` });
+const sp = (name: SpecialName): Card => ({ kind: 'special', name, id: name });
+
+function Example({ cards }: { cards: Card[] }) {
+  return (
+    <div className="rules__example">
+      {cards.map((c, i) => (
+        <CardChip key={i} card={c} />
+      ))}
+    </div>
+  );
+}
+
+function Combo({ name, note, cards }: { name: string; note: string; cards: Card[] }) {
+  return (
+    <div className="rules__combo">
+      <div className="rules__combo-head">
+        <strong>{name}</strong> · {note}
+      </div>
+      <Example cards={cards} />
+    </div>
+  );
+}
+
 // Collapsible Tichu rules reference, shown from room creation through play.
 export function RulesGuide() {
   return (
@@ -75,6 +103,51 @@ export function RulesGuide() {
           이김). 폭탄을 제외한 조합의 아무 카드나 대체합니다.
         </li>
       </ul>
+
+      <h4>🃏 조합 자세히 보기</h4>
+      <p className="rules__combo-intro">
+        리드한 조합과 <strong>같은 종류·같은 장수</strong>로만 받아칠 수 있고, 더 높은 것만
+        가능합니다 (폭탄은 예외).
+      </p>
+      <div className="rules__combos">
+        <Combo name="싱글" note="카드 1장" cards={[s('star', 14)]} />
+        <Combo name="페어" note="같은 숫자 2장" cards={[s('jade', 9), s('sword', 9)]} />
+        <Combo
+          name="트리플"
+          note="같은 숫자 3장"
+          cards={[s('jade', 7), s('sword', 7), s('pagoda', 7)]}
+        />
+        <Combo
+          name="풀하우스"
+          note="트리플 + 페어 (트리플 숫자로 비교)"
+          cards={[s('jade', 9), s('sword', 9), s('pagoda', 9), s('jade', 13), s('sword', 13)]}
+        />
+        <Combo
+          name="스트레이트"
+          note="연속된 숫자 5장↑ (무늬 무관)"
+          cards={[s('jade', 4), s('sword', 5), s('pagoda', 6), s('star', 7), s('jade', 8)]}
+        />
+        <Combo
+          name="계단"
+          note="연속된 페어 2쌍↑"
+          cards={[s('jade', 7), s('sword', 7), s('jade', 8), s('sword', 8)]}
+        />
+        <Combo
+          name="💣 포카드 폭탄"
+          note="같은 숫자 4장"
+          cards={[s('jade', 9), s('sword', 9), s('pagoda', 9), s('star', 9)]}
+        />
+        <Combo
+          name="💣 스트레이트 플러시"
+          note="같은 무늬 연속 5장↑ (가장 강함)"
+          cards={[s('jade', 4), s('jade', 5), s('jade', 6), s('jade', 7), s('jade', 8)]}
+        />
+        <Combo
+          name="특수 카드"
+          note="참새 · 개 · 봉황 · 용"
+          cards={[sp('mahjong'), sp('dog'), sp('phoenix'), sp('dragon')]}
+        />
+      </div>
     </details>
   );
 }

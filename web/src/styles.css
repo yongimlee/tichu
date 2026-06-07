@@ -371,6 +371,58 @@ input:focus {
   color: var(--text);
 }
 
+/* Combination examples — small card thumbnails (NB: no base text color here,
+   so the .card.card--suit colour rules still win and cards aren't all black). */
+.rules__combo-intro {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.rules__combos {
+  display: grid;
+  gap: 0.7rem;
+}
+.rules__combo-head {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.rules__combo-head strong {
+  color: var(--text);
+}
+.rules__example {
+  display: flex;
+  gap: 0.22rem;
+  flex-wrap: wrap;
+}
+.rules__example .card {
+  width: 40px;
+  height: 71px;
+  min-height: 0;
+  padding: 0.25rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  background: #f4f6fb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+  font-weight: 700;
+}
+.rules__example .card--special {
+  padding: 0;
+  overflow: hidden;
+}
+.rules__example .card__rank {
+  font-size: 0.9rem;
+  align-self: flex-start;
+}
+.rules__example .card__glyph {
+  font-size: 1rem;
+}
+
 /* Legal-move suggestions on your turn. */
 .suggest {
   margin: 0.5rem 0;
