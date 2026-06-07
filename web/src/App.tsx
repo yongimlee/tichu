@@ -87,7 +87,14 @@ export function App() {
           setSelfId(res.data.selfId);
           setRoom(res.data.room);
         } else {
+          // The room is gone (e.g. it was purged while we were disconnected).
+          // Drop the dead session and return to the home screen instead of
+          // leaving a stale game view whose buttons would all error.
           clearSession();
+          setRoom(null);
+          setView(null);
+          setSelfId('');
+          setError('방을 찾을 수 없어 처음 화면으로 돌아갑니다.');
         }
       });
     };

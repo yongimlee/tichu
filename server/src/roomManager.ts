@@ -19,11 +19,12 @@ import {
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
 
-// Grace period before an all-offline room is purged (lets brief drops recover).
+// Grace period before an all-offline room is purged. This must be generous: a
+// disconnect is often just a transient drop (mobile backgrounding, network blip,
+// host idling on the scoring screen), and an explicit "leave room" already
+// dissolves a solo+bots room immediately — so there's no need to purge a merely
+// disconnected player quickly.
 const CLEANUP_GRACE_MS = 60_000;
-// A room with a single human (the rest bots) isn't worth holding open long when
-// that human drops — just enough to survive a page refresh / momentary blip.
-const SOLO_CLEANUP_GRACE_MS = 10_000;
 
 export class RoomManager {
   private rooms = new Map<string, Room>();
@@ -200,12 +201,10 @@ export class RoomManager {
     if (player) player.connected = false;
     this.ensureHumanHost(room); // if the host dropped, hand it to an online human
     // If no human is online any more, schedule a delayed purge (bots don't count).
-    // A solo human (rest are bots) gets only a short grace so an abandoned
-    // bots-only room is cleared quickly, while still surviving a page refresh.
+    // Reconnecting (or returning to the tab) within the grace cancels it.
     const humans = room.players.filter((p) => !p.isBot);
     if (humans.every((p) => !p.connected)) {
-      const grace = humans.length <= 1 ? Math.min(this.graceMs, SOLO_CLEANUP_GRACE_MS) : this.graceMs;
-      this.scheduleCleanup(room.code, grace);
+      this.scheduleCleanup(room.code);
     }
     return room;
   }
@@ -252,9 +251,9 @@ export class RoomManager {
     this.rooms.delete(code);
   }
 
-  private scheduleCleanup(code: string, graceMs: number = this.graceMs): void {
+  private scheduleCleanup(code: string): void {
     if (this.cleanupTimers.has(code)) return;
-    const timer = setTimeout(() => this.purgeIfAllOffline(code), graceMs);
+    const timer = setTimeout(() => this.purgeIfAllOffline(code), this.graceMs);
     timer.unref?.(); // don't keep the process alive just for this timer
     this.cleanupTimers.set(code, timer);
   }
