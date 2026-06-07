@@ -138,7 +138,10 @@ export function App() {
             <button
               type="button"
               className="pat-btn"
-              onClick={() => setPraiseAt(Date.now())}
+              onClick={() => {
+                setPraiseAt(Date.now());
+                socket.emit('dev:pat'); // server logs who patted (anon on home)
+              }}
               title="개발자 머리 쓰다듬기"
             >
               🫶 개발자 머리 쓰다듬기

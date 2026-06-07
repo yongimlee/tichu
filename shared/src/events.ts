@@ -67,6 +67,8 @@ export interface ClientToServerEvents {
   'room:close': () => void;
   /** Leave the current room (room is purged once everyone has left). */
   'room:leave': () => void;
+  /** Fun: someone patted the developer's head. Server logs who (or "anonymous"). */
+  'dev:pat': () => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -76,4 +78,6 @@ export interface SocketData {
   roomCode?: string;
   /** Timestamp of the last emote, for light anti-spam rate limiting. */
   lastEmoteAt?: number;
+  /** Timestamp of the last head-pat, for light anti-spam rate limiting. */
+  lastPatAt?: number;
 }

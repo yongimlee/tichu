@@ -274,9 +274,37 @@ export function registerSocketHandlers(
     io.to(room.code).emit('game:emote', { seat: player.seat, emoji });
   });
 
+  socket.on('dev:pat', () => {
+    const now = Date.now();
+    if (now - (socket.data.lastPatAt ?? 0) < 1500) return; // light anti-spam
+    socket.data.lastPatAt = now;
+    const room = rooms.getRoomBySocket(socket.id);
+    const player = room?.players.find((p) => p.id === socket.id);
+    const who = player ? `플레이어 ${player.nickname}(이)가` : '익명의 플레이어가';
+    logPat(`${who} 머리를 쓰다듬었습니다.`);
+  });
+
   socket.on('disconnect', () => {
     const room = rooms.disconnect(socket.id);
     if (room) emitRoom(room.code);
+  });
+}
+
+/**
+ * Record a head-pat. Always logs to the server console (visible in the hosting
+ * dashboard's logs, e.g. Render). If DISCORD_WEBHOOK_URL is set, it also posts
+ * the message there so you can get a live feed on your phone — no secret in code.
+ */
+function logPat(message: string): void {
+  console.log(`[pat] ${new Date().toISOString()} ${message}`);
+  const url = process.env.DISCORD_WEBHOOK_URL;
+  if (!url) return;
+  void fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ content: message }),
+  }).catch(() => {
+    /* best-effort — never let a logging failure affect gameplay */
   });
 }
 
