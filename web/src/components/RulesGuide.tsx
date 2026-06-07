@@ -30,12 +30,16 @@ export function RulesGuide() {
       <h4>🎯 티츄 선언 (보너스 베팅)</h4>
       <ul>
         <li>
-          <strong>라지 티츄 (±200점)</strong>: 처음 <strong>8장</strong>만 본 상태에서, 카드를 더
-          받기 전에 선언합니다.
+          <strong>라지 티츄 (±200점)</strong> <span className="badge badge--gt">LT</span>: 처음{' '}
+          <strong>8장</strong>만 본 상태에서, 카드를 더 받기 전에 선언합니다.
         </li>
         <li>
-          <strong>스몰 티츄 (±100점)</strong>: 14장을 모두 받은 뒤부터 <strong>자신이 첫 카드를
-          내기 전</strong>까지 언제든 선언할 수 있습니다.
+          <strong>스몰 티츄 (±100점)</strong> <span className="badge">T</span>: 14장을 모두 받은
+          뒤부터 <strong>자신이 첫 카드를 내기 전</strong>까지 언제든 선언할 수 있습니다.
+        </li>
+        <li>
+          선언하면 해당 플레이어 좌석에 위 뱃지(<span className="badge badge--gt">LT</span> /{' '}
+          <span className="badge">T</span>)가 표시됩니다.
         </li>
         <li>
           성공 조건은 선언한 사람이 그 판에서 <strong>가장 먼저 아웃(1등)</strong>하는 것. 성공하면
