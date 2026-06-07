@@ -16,3 +16,7 @@ services:
     envVars:
       - key: NODE_VERSION
         value: '20'
+      # Optional: Discord/Slack webhook for the head-pat feed. Value is set in the
+      # Render dashboard (sync: false → kept out of git, survives blueprint syncs).
+      - key: DISCORD_WEBHOOK_URL
+        sync: false
