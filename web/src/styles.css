@@ -328,6 +328,49 @@ input:focus {
   width: auto;
 }
 
+/* Collapsible rules reference at the bottom of the game screen. */
+.rules {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.4rem 0.9rem 0.6rem;
+}
+
+.rules > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+  padding: 0.4rem 0;
+}
+
+.rules > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rules h4 {
+  margin: 0.85rem 0 0.3rem;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.rules ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.rules li {
+  margin: 0.22rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.rules strong {
+  color: var(--text);
+}
+
 /* Legal-move suggestions on your turn. */
 .suggest {
   margin: 0.5rem 0;
