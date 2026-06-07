@@ -369,25 +369,33 @@ export class BotDriver {
   }
 
   private step(code: string): void {
-    const room = this.rooms.getRoom(code);
-    const state = this.games.getState(code);
-    if (!room || !state) return;
-    const action = pendingBotAction(room, state);
-    if (!action) return;
+    // This runs from a setTimeout, so any throw here is an *uncaught* exception
+    // that would crash the whole (single-instance, in-memory) server and wipe
+    // every room. Wrap the entire body — including settle/emit/kick — so a bad
+    // bot turn can, at worst, stall one room rather than end everyone's game.
     try {
-      applyBotAction(action, state);
-    } catch {
-      // Shouldn't happen, but never loop forever: fall back to a pass if we can.
+      const room = this.rooms.getRoom(code);
+      const state = this.games.getState(code);
+      if (!room || !state) return;
+      const action = pendingBotAction(room, state);
+      if (!action) return;
       try {
-        if (action.type === 'move' && state.trick.top) pass(state, action.seat);
-        else return;
+        applyBotAction(action, state);
       } catch {
-        return;
+        // Shouldn't happen, but never loop forever: fall back to a pass if we can.
+        try {
+          if (action.type === 'move' && state.trick.top) pass(state, action.seat);
+          else return;
+        } catch {
+          return;
+        }
       }
+      this.games.settle(code);
+      this.emitState(room);
+      this.kick(code); // chain to the next bot action, if any
+    } catch (err) {
+      console.error(`[bot.step] error in room ${code}:`, err);
     }
-    this.games.settle(code);
-    this.emitState(room);
-    this.kick(code); // chain to the next bot action, if any
   }
 
   private emitState(room: Room): void {

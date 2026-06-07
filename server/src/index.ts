@@ -19,6 +19,20 @@ import { registerSocketHandlers } from './socket';
 const PORT = Number(process.env.PORT ?? 3001);
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
 
+// Last-resort safety net. All game/room state lives in this single process's
+// memory, so a single uncaught throw on an async path (a bot timer, a socket
+// event with no try/catch) would kill the process and wipe *every* room — every
+// connected player then fails to reconnect and gets bounced to the home screen
+// ("방을 찾을 수 없습니다"). Log the stack (visible in the host's logs) and keep
+// running instead; rooms are isolated, so one bad event shouldn't end everyone's
+// game. This is a backstop — handlers should still catch their own errors.
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException] keeping server alive:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection] keeping server alive:', reason);
+});
+
 const app = express();
 app.use(cors({ origin: CLIENT_ORIGIN }));
 app.get('/health', (_req, res) => {
