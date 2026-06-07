@@ -37,7 +37,6 @@ body {
 }
 
 .app__header {
-  text-align: center;
   padding: 1rem 0;
 }
 
@@ -46,7 +45,54 @@ body {
   font-size: 2rem;
   letter-spacing: 0.08em;
   color: var(--accent);
+  text-align: center;
 }
+
+/* Pat-the-developer easter egg — button one row below the title, right-aligned,
+   with a small message that pops up just above it. */
+.pat {
+  position: relative;
+  width: max-content;
+  margin: 0.5rem 0 0 auto;
+}
+.pat-btn {
+  display: block;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.pat-toast {
+  position: absolute;
+  bottom: calc(100% + 0.35rem);
+  right: 0;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(56, 189, 147, 0.15);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  animation: patPop 0.18s ease both;
+}
+@keyframes patPop {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.pat-btn:hover {
+  background: var(--surface-2);
+}
+.pat-btn:active {
+  transform: scale(0.94);
+}
+
 
 .app__main {
   display: flex;

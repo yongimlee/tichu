@@ -28,6 +28,7 @@ export function App() {
   const [view, setView] = useState<PlayerView | null>(null);
   const [selfId, setSelfId] = useState('');
   const [error, setError] = useState('');
+  const [praiseAt, setPraiseAt] = useState(0); // head-pat-the-dev easter egg
 
   // Dev-only UI showcase: open with #demo to view the in-game screen solo.
   const [hash, setHash] = useState(window.location.hash);
@@ -66,6 +67,13 @@ export function App() {
     const t = setTimeout(() => setError(''), 4000);
     return () => clearTimeout(t);
   }, [error]);
+
+  // Auto-dismiss the "개발자가 좋아합니다" message (re-armed on each pat).
+  useEffect(() => {
+    if (!praiseAt) return;
+    const t = setTimeout(() => setPraiseAt(0), 2500);
+    return () => clearTimeout(t);
+  }, [praiseAt]);
 
   // On every (re)connect, if we hold a saved session, rejoin our seat. This
   // covers a page refresh and an auto-reconnect after the network dropped.
@@ -108,7 +116,18 @@ export function App() {
   return (
     <div className={`app${inGame ? ' app--wide' : ''}`}>
       <header className="app__header">
-        <h1 className="app__title">Tichu</h1>
+        <h1 className="app__title">TICHU</h1>
+        <div className="pat">
+          {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다 😊</div>}
+          <button
+            type="button"
+            className="pat-btn"
+            onClick={() => setPraiseAt(Date.now())}
+            title="개발자 머리 쓰다듬기"
+          >
+            🫶 개발자 머리 쓰다듬기
+          </button>
+        </div>
       </header>
 
       {error && <div className="toast toast--error">{error}</div>}
