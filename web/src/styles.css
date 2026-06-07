@@ -381,7 +381,8 @@ input:focus {
 }
 .rules__combos {
   display: grid;
-  gap: 0.7rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.7rem 0.9rem;
 }
 .rules__combo-head {
   font-size: 0.82rem;
