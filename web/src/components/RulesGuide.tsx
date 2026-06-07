@@ -90,8 +90,11 @@ export function RulesGuide() {
         <li>
           🕊️ <strong>참새(1)</strong>: 가장 낮은 카드(보유자가 첫 리드). <strong>싱글</strong>로
           내거나 <strong>스트레이트의 맨 아래 1</strong>로 쓸 수 있습니다(예: 1·2·3·4·5). 페어·
-          트리플 등에는 못 들어갑니다. 낼 때 2~10, J~A를 “소원”으로 지정하면, 낼 수 있는 사람은
-          반드시 그 숫자를 내야 합니다.
+          트리플 등에는 못 들어갑니다.
+          <span className="rules__sub">
+            <strong>참새의 소원</strong>: 낼 때 2~10, J~A 중 하나를 지정하면, 낼 수 있는 사람은
+            반드시 그 숫자를 내야 합니다.
+          </span>
         </li>
         <li>
           🐶 <strong>개</strong>: 리드 전용. 점수 없이 리드권을 파트너에게 넘깁니다.

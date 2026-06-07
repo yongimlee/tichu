@@ -371,6 +371,13 @@ input:focus {
   color: var(--text);
 }
 
+/* Indented sub-line within a rules item (e.g. 참새의 소원). */
+.rules__sub {
+  display: block;
+  margin-top: 0.25rem;
+  margin-left: 1rem;
+}
+
 /* Combination examples — small card thumbnails (NB: no base text color here,
    so the .card.card--suit colour rules still win and cards aren't all black). */
 .rules__combo-intro {
