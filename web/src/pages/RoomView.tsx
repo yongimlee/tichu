@@ -1,5 +1,6 @@
 import type { Room, Seat } from '@tichu/shared';
 import { socket } from '../socket';
+import { RulesGuide } from '../components/RulesGuide';
 
 interface Props {
   room: Room;
@@ -127,6 +128,8 @@ export function RoomView({ room, selfId, onLeave }: Props) {
           나가기
         </button>
       </section>
+
+      <RulesGuide />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   type TeamSelectionMode,
 } from '@tichu/shared';
 import { socket } from '../socket';
+import { RulesGuide } from '../components/RulesGuide';
 
 interface Props {
   onJoined: (room: Room, selfId: string, token: string) => void;
@@ -40,6 +41,7 @@ export function Home({ onJoined, onError }: Props) {
   };
 
   return (
+    <>
     <div className="card home">
       <div className="field">
         <label htmlFor="nickname">닉네임</label>
@@ -134,5 +136,7 @@ export function Home({ onJoined, onError }: Props) {
         </div>
       )}
     </div>
+    <RulesGuide />
+    </>
   );
 }
