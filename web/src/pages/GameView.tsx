@@ -409,9 +409,12 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
     [myTurn, view.hand, topCombo],
   );
 
-  // While a single is on the table, default to picking one card at a time —
-  // but still allow stacking same-rank cards (the only way to beat it: a bomb).
+  // While a single is on the table you can only beat it with a higher single or
+  // a bomb. So restrict to one card at a time — unless the hand actually holds a
+  // bomb (four of a kind / straight flush), in which case allow free multi-select
+  // so the player can build it.
   const singleTrick = !isLeading && topCombo?.type === 'single';
+  const allowMulti = !singleTrick || handHasBomb(view.hand);
 
   const toggle = (card: Card) => {
     setSelected((prev) => {
@@ -420,17 +423,11 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
         next.delete(card.id);
         return next;
       }
-      if (!singleTrick) {
+      if (allowMulti) {
         next.add(card.id);
         return next;
       }
-      // Single trick: keep one selected unless the new card matches the rank of
-      // the current selection (building a four-of-a-kind bomb).
-      const sel = view.hand.filter((c) => prev.has(c.id));
-      const rank = card.kind === 'suit' ? card.rank : null;
-      const sameRank =
-        rank !== null && sel.length > 0 && sel.every((c) => c.kind === 'suit' && c.rank === rank);
-      return sameRank ? new Set([...prev, card.id]) : new Set([card.id]);
+      return new Set([card.id]); // single-trick, no bomb available → one at a time
     });
   };
 
@@ -603,6 +600,27 @@ function isPhoenixSingle(cards: Card[]): boolean {
 
 function isDogSingle(cards: Card[]): boolean {
   return cards.length === 1 && cards[0].kind === 'special' && cards[0].name === 'dog';
+}
+
+/** Does the hand contain a bomb — four of a kind, or a same-suit run of 5+? */
+function handHasBomb(hand: Card[]): boolean {
+  const byRank = new Map<number, number>();
+  const bySuit = new Map<string, Set<number>>();
+  for (const c of hand) {
+    if (c.kind !== 'suit') continue; // bombs are made of plain suit cards only
+    byRank.set(c.rank, (byRank.get(c.rank) ?? 0) + 1);
+    if (!bySuit.has(c.suit)) bySuit.set(c.suit, new Set());
+    bySuit.get(c.suit)!.add(c.rank);
+  }
+  for (const count of byRank.values()) if (count >= 4) return true; // four of a kind
+  for (const ranks of bySuit.values()) {
+    let run = 0;
+    for (let r = 2; r <= 14; r++) {
+      run = ranks.has(r) ? run + 1 : 0;
+      if (run >= 5) return true; // straight flush
+    }
+  }
+  return false;
 }
 
 const TYPE_LABEL: Record<CombinationType, string> = {
