@@ -29,6 +29,7 @@ export function App() {
   const [selfId, setSelfId] = useState('');
   const [error, setError] = useState('');
   const [praiseAt, setPraiseAt] = useState(0); // head-pat-the-dev easter egg
+  const [confirmLeave, setConfirmLeave] = useState(false);
 
   // Dev-only UI showcase: open with #demo to view the in-game screen solo.
   const [hash, setHash] = useState(window.location.hash);
@@ -117,20 +118,57 @@ export function App() {
     <div className={`app${inGame ? ' app--wide' : ''}`}>
       <header className="app__header">
         <h1 className="app__title">TICHU</h1>
-        <div className="pat">
-          {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다😊💕</div>}
-          <button
-            type="button"
-            className="pat-btn"
-            onClick={() => setPraiseAt(Date.now())}
-            title="개발자 머리 쓰다듬기"
-          >
-            🫶 개발자 머리 쓰다듬기
-          </button>
+        <div className="app__controls">
+          {(room && view) || hash === '#demo' ? (
+            <button type="button" className="leave-btn" onClick={() => setConfirmLeave(true)}>
+              🚪 방 나가기
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="pat">
+            {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다😊💕</div>}
+            <button
+              type="button"
+              className="pat-btn"
+              onClick={() => setPraiseAt(Date.now())}
+              title="개발자 머리 쓰다듬기"
+            >
+              🫶 개발자 머리 쓰다듬기
+            </button>
+          </div>
         </div>
       </header>
 
       {error && <div className="toast toast--error">{error}</div>}
+
+      {confirmLeave && (
+        <div className="modal-overlay" onClick={() => setConfirmLeave(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">방을 나가시겠어요?</h3>
+            <p className="modal__body">진행 중인 게임에서 빠지게 됩니다.</p>
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="btn modal__btn modal__btn--danger"
+                onClick={() => {
+                  setConfirmLeave(false);
+                  if (hash !== '#demo') handleLeave(); // demo: visual only
+                }}
+              >
+                나가기
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost modal__btn"
+                onClick={() => setConfirmLeave(false)}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="app__main">
         {hash === '#demo' ? (
