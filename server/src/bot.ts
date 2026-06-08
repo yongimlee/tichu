@@ -205,6 +205,14 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
   const hand = state.players[seat].hand;
   const top = state.trick.top;
   const leading = !top;
+  const partner = partnerSeat(seat);
+
+  // Cooperate with a partner's Tichu: their +100/+200 bonus survives only if they
+  // go out *first*. While that's still possible (nobody has gone out yet) we must
+  // not go out before them, and we play passively to give them room.
+  const helpPartnerTichu =
+    (state.players[partner].tichu || state.players[partner].grandTichu) &&
+    state.finished.length === 0;
 
   let moves = enumerateMoves(hand, top);
   let mustPlayForWish = false;
@@ -216,16 +224,19 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
     }
   }
 
-  // Going out (emptying the hand) is always worth it.
-  const goOut = moves.filter((m) => m.cards.length === hand.length);
-  if (goOut.length) {
-    const pick = goOut.find((m) => m.bombLevel === 0) ?? goOut[0];
-    return withWish(pick, hand);
+  // Protecting a partner's Tichu: drop hand-emptying moves so we never go out first
+  // (unless a wish forces our hand).
+  if (helpPartnerTichu && !mustPlayForWish) {
+    const nonOut = moves.filter((m) => m.cards.length < hand.length);
+    if (nonOut.length) moves = nonOut;
   }
 
-  // Don't beat your partner if they're currently winning the trick.
-  if (!leading && state.trick.owner === partnerSeat(seat) && !mustPlayForWish) {
-    return { pass: true };
+  // Going out (emptying the hand) is always worth it — except while protecting a
+  // partner's Tichu, where going out first would cancel their bonus.
+  const goOut = moves.filter((m) => m.cards.length === hand.length);
+  if (goOut.length && !helpPartnerTichu) {
+    const pick = goOut.find((m) => m.bombLevel === 0) ?? goOut[0];
+    return withWish(pick, hand);
   }
 
   // Prefer moves that don't break a bomb apart.
@@ -234,11 +245,39 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
   const pool = moves.filter(keepsBomb);
   const usable = pool.length ? pool : moves;
   const nonBomb = usable.filter((m) => m.bombLevel === 0);
+  const dog = hand.find((c) => c.kind === 'special' && c.name === 'dog');
+
+  // Don't beat your partner if they're currently winning the trick.
+  if (!leading && state.trick.owner === partner && !mustPlayForWish) {
+    return { pass: true };
+  }
+
+  // Protecting a partner's Tichu while following: normally stay passive (pass). But
+  // if we hold the Dog, it can be worth spending a *cheap* card to seize the lead —
+  // next turn we lead the Dog and hand the lead straight to the partner. That beats
+  // sitting on the Dog (it can only be led, so it may otherwise die in our hand).
+  // Guards keep the grab cheap (low, small, no bomb) and make sure we'll still hold
+  // the Dog plus another card, so the later Dog lead won't make us go out first.
+  if (helpPartnerTichu && !leading && !mustPlayForWish) {
+    const grab = nonBomb[0];
+    const worthSeizingLead =
+      dog &&
+      grab &&
+      grab.rank < ACE_RANK &&
+      grab.cards.length <= 2 &&
+      hand.length - grab.cards.length >= 2;
+    if (worthSeizingLead) return { play: grab.cards.map((c) => c.id) };
+    return { pass: true };
+  }
 
   if (leading) {
+    // Protecting a partner's Tichu and holding the Dog (with a card to spare): lead
+    // it to hand the lead straight to the partner so they can go out first.
+    if (helpPartnerTichu && dog && hand.length > 1) {
+      return { play: [dog.id] };
+    }
     const pick = chooseLead(usable, bombs) ?? nonBomb[0] ?? usable[0];
     if (pick) return withWish(pick, hand);
-    const dog = hand.find((c) => c.kind === 'special' && c.name === 'dog');
     return { play: [(dog ?? hand[0]).id] };
   }
 
@@ -251,8 +290,25 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
     }
     return { play: cheapest.cards.map((c) => c.id) };
   }
+
+  // No ordinary beating move. Spend a held bomb only when the trick is worth it:
+  // enough points are on the table, or the opponent winning it is about to go out.
+  // Otherwise keep conserving it. (`usable` is sorted cheapest-first, so the first
+  // bomb is the smallest one that still beats the top.)
+  if (!mustPlayForWish) {
+    const bomb = usable.find((m) => m.bombLevel > 0);
+    if (bomb) {
+      const owner = state.trick.owner;
+      const ownerNearOut =
+        owner !== null && owner !== seat && state.players[owner].hand.length <= 2;
+      if (trickPoints(state) >= 10 || ownerNearOut) {
+        return { play: bomb.cards.map((c) => c.id) };
+      }
+    }
+  }
+
   if (mustPlayForWish && usable[0]) return { play: usable[0].cards.map((c) => c.id) };
-  return { pass: true }; // can't beat cheaply (or only have a bomb) → hold
+  return { pass: true }; // not worth a bomb (or none) → hold
 }
 
 /** Attach a Mahjong wish to the play when the chosen combo leads the Mahjong. */
