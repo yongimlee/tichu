@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import type { Card, GamePhase, PlayerView, PublicSeatState, Room, Seat, Suit } from '@tichu/shared';
+import type {
+  Card,
+  GamePhase,
+  MatchInfo,
+  PlayerView,
+  PublicSeatState,
+  Room,
+  Seat,
+  Suit,
+} from '@tichu/shared';
 import { GameView } from './GameView';
 import { Home } from './Home';
 import { RoomView } from './RoomView';
@@ -132,7 +141,16 @@ const CAPTURED_MID: Card[][] = [
   ],
 ];
 
-const match = { scores: { A: 120, B: 85 }, target: 500, handNumber: 3, winner: null } as const;
+const match: MatchInfo = {
+  scores: { A: 120, B: 85 },
+  target: 500,
+  handNumber: 3,
+  winner: null,
+  history: [
+    { hand: 1, delta: { A: 70, B: 30 }, total: { A: 70, B: 30 } },
+    { hand: 2, delta: { A: 50, B: 55 }, total: { A: 120, B: 85 } },
+  ],
+};
 
 // In-game scenarios: the real phases plus a "Mahjong lead" view (pick a wish)
 // and a "Dragon trick" view (choose who receives the won trick).

@@ -1048,10 +1048,119 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.6rem 1rem;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.matchbar:disabled {
+  cursor: default;
+}
+
+.matchbar__hint {
+  font-size: 0.65rem;
+  color: var(--accent);
+  margin-top: 0.1rem;
+}
+
+/* Generic centered modal overlay (score history, …). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.overlay__panel {
+  width: 100%;
+  max-width: 360px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.overlay__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.overlay__head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.overlay__close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+
+.scorehistory {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.scorehistory th,
+.scorehistory td {
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+
+.scorehistory thead th {
+  font-size: 0.75rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.scorehistory tbody tr:nth-child(even) {
+  background: var(--surface-2);
+}
+
+.scorehistory__hand {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.scorehistory__delta {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.scorehistory__delta.is-neg {
+  color: #d62828;
+}
+
+.scorehistory__total {
+  margin-left: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.scorehistory tfoot td {
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+}
+
+.scorehistory__now {
+  color: var(--accent);
 }
 
 .matchbar__team {

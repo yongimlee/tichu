@@ -62,12 +62,20 @@ export interface HandResult {
   firstOut: Seat;
 }
 
+/** One settled hand's contribution to the running match score. */
+export interface HandScore {
+  hand: number; // 1-based hand number
+  delta: { A: number; B: number }; // points gained/lost this hand
+  total: { A: number; B: number }; // cumulative score after this hand
+}
+
 /** Cumulative match state, tracked by the server across hands. */
 export interface MatchInfo {
   scores: { A: number; B: number };
   target: number; // points needed to win (1000)
   handNumber: number;
   winner: TeamId | null;
+  history: HandScore[]; // settled hands so far, oldest first
 }
 
 export interface GameState {

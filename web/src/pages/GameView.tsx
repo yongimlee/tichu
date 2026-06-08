@@ -11,6 +11,7 @@ import {
   type Card,
   type Combination,
   type CombinationType,
+  type HandScore,
   type PlayerView,
   type Room,
   type Seat,
@@ -111,20 +112,98 @@ function EmoteBar({ onEmote }: { onEmote: (emoji: string) => void }) {
 }
 
 function MatchBar({ view }: { view: PlayerView }) {
-  const { scores, target, handNumber } = view.match;
+  const { scores, target, handNumber, history } = view.match;
+  const [showHistory, setShowHistory] = useState(false);
+  const hasHistory = history.length > 0;
   return (
-    <div className="matchbar">
-      <div className="matchbar__team">
-        <span className="matchbar__label">팀 A</span>
-        <span className="matchbar__score">{scores.A}</span>
-      </div>
-      <div className="matchbar__mid">
-        <div>{handNumber}판째</div>
-        <div className="matchbar__target">목표 {target}</div>
-      </div>
-      <div className="matchbar__team">
-        <span className="matchbar__label">팀 B</span>
-        <span className="matchbar__score">{scores.B}</span>
+    <>
+      <button
+        type="button"
+        className="matchbar"
+        onClick={() => setShowHistory(true)}
+        disabled={!hasHistory}
+        title={hasHistory ? '점수 기록 보기' : '아직 끝난 판이 없습니다'}
+      >
+        <div className="matchbar__team">
+          <span className="matchbar__label">팀 A</span>
+          <span className="matchbar__score">{scores.A}</span>
+        </div>
+        <div className="matchbar__mid">
+          <div>{handNumber}판째</div>
+          <div className="matchbar__target">목표 {target}</div>
+          {hasHistory && <div className="matchbar__hint">📊 기록</div>}
+        </div>
+        <div className="matchbar__team">
+          <span className="matchbar__label">팀 B</span>
+          <span className="matchbar__score">{scores.B}</span>
+        </div>
+      </button>
+      {showHistory && (
+        <ScoreHistory history={history} scores={scores} onClose={() => setShowHistory(false)} />
+      )}
+    </>
+  );
+}
+
+/** Tap-the-scoreboard overlay: per-hand point swings and the running total. */
+function ScoreHistory({
+  history,
+  scores,
+  onClose,
+}: {
+  history: HandScore[];
+  scores: { A: number; B: number };
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const fmt = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="overlay__panel" onClick={(e) => e.stopPropagation()}>
+        <div className="overlay__head">
+          <h3>점수 기록</h3>
+          <button type="button" className="overlay__close" onClick={onClose} aria-label="닫기">
+            ✕
+          </button>
+        </div>
+        <table className="scorehistory">
+          <thead>
+            <tr>
+              <th>판</th>
+              <th>팀 A</th>
+              <th>팀 B</th>
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((h) => (
+              <tr key={h.hand}>
+                <td className="scorehistory__hand">{h.hand}판</td>
+                {(['A', 'B'] as const).map((team) => (
+                  <td key={team}>
+                    <span className={`scorehistory__delta${h.delta[team] < 0 ? ' is-neg' : ''}`}>
+                      {fmt(h.delta[team])}
+                    </span>
+                    <span className="scorehistory__total">{h.total[team]}</span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>현재</td>
+              <td className="scorehistory__now">{scores.A}</td>
+              <td className="scorehistory__now">{scores.B}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   );

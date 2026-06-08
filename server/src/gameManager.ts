@@ -1,4 +1,11 @@
-import { DEFAULT_TARGET, startHand, type GameState, type MatchInfo, type TeamId } from '@tichu/shared';
+import {
+  DEFAULT_TARGET,
+  startHand,
+  type GameState,
+  type HandScore,
+  type MatchInfo,
+  type TeamId,
+} from '@tichu/shared';
 import { cryptoRandom } from './rng';
 
 // Holds the authoritative match for each in-progress room: the cumulative team
@@ -13,6 +20,7 @@ interface MatchRecord {
   handNumber: number;
   winner: TeamId | null;
   settledHand: number; // handNumber whose result has already been added to scores
+  history: HandScore[]; // per-hand deltas + running totals, oldest first
 }
 
 export class GameManager {
@@ -26,6 +34,7 @@ export class GameManager {
       handNumber: 1,
       winner: null,
       settledHand: 0,
+      history: [],
     };
     this.matches.set(code, record);
     return record.state;
@@ -38,7 +47,13 @@ export class GameManager {
   getMatchInfo(code: string): MatchInfo | undefined {
     const r = this.matches.get(code);
     if (!r) return undefined;
-    return { scores: r.scores, target: r.target, handNumber: r.handNumber, winner: r.winner };
+    return {
+      scores: r.scores,
+      target: r.target,
+      handNumber: r.handNumber,
+      winner: r.winner,
+      history: r.history,
+    };
   }
 
   /** Apply the finished hand's result to the match scores exactly once. */
@@ -48,9 +63,15 @@ export class GameManager {
     if (r.state.phase !== 'scoring') return;
     if (r.settledHand === r.handNumber) return;
 
-    r.scores.A += r.state.result.teamScores.A;
-    r.scores.B += r.state.result.teamScores.B;
+    const delta = r.state.result.teamScores;
+    r.scores.A += delta.A;
+    r.scores.B += delta.B;
     r.settledHand = r.handNumber;
+    r.history.push({
+      hand: r.handNumber,
+      delta: { A: delta.A, B: delta.B },
+      total: { A: r.scores.A, B: r.scores.B },
+    });
 
     const { A, B } = r.scores;
     if ((A >= r.target || B >= r.target) && A !== B) {
