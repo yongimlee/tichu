@@ -23,6 +23,9 @@ const suit = (s: 'jade' | 'sword' | 'pagoda' | 'star', rank: number): Card => ({
 });
 const DOG: Card = { kind: 'special', name: 'dog', id: 'dog' };
 const DRAGON: Card = { kind: 'special', name: 'dragon', id: 'dragon' };
+// A throwaway hand of n cards — used to give a seat a "comfortable" (not near-out)
+// hand when only its length matters.
+const filler = (n: number): Card[] => Array.from({ length: n }, (_, i) => suit('pagoda', 2 + i));
 
 type Decl = 'tichu' | 'grand';
 
@@ -88,17 +91,27 @@ test("does not go out first while protecting a partner's Tichu", () => {
 
 test("stays passive (passes) while protecting a partner's Tichu", () => {
   const s = mkState({
-    hands: [[], [suit('jade', 9), suit('jade', 11)], [], [suit('star', 7)]],
+    hands: [filler(6), [suit('jade', 9), suit('jade', 11)], [], [suit('star', 7)]],
     declared: { 3: 'grand' },
     top: single(suit('sword', 6)),
-    owner: 0,
+    owner: 0, // opponent owns the trick but has a full hand (not near out)
   });
   assert.equal(move(s).pass, true);
 });
 
+test("beats a nearly-out opponent to protect the partner's Tichu", () => {
+  const s = mkState({
+    hands: [filler(3), [suit('jade', 8), suit('jade', 11)], [], [suit('star', 7)]],
+    declared: { 3: 'grand' },
+    top: single(suit('sword', 6)),
+    owner: 0, // opponent owns the trick and is down to 3 cards -> deny their go-out
+  });
+  assert.deepEqual(move(s).play, ['jade-8']); // beat instead of passing
+});
+
 test('seizes the lead with a cheap card when holding the Dog (partner Tichu)', () => {
   const s = mkState({
-    hands: [[], [DOG, suit('jade', 8), suit('jade', 11)], [], [suit('star', 7)]],
+    hands: [filler(6), [DOG, suit('jade', 8), suit('jade', 11)], [], [suit('star', 7)]],
     declared: { 3: 'tichu' },
     top: single(suit('sword', 6)),
     owner: 0,

@@ -285,6 +285,24 @@ export function botMove(
   // Guards keep the grab cheap (low, small, no bomb) and make sure we'll still hold
   // the Dog plus another card, so the later Dog lead won't make us go out first.
   if (helpPartnerTichu && !leading && !mustPlayForWish) {
+    // An opponent who owns the trick and is nearly out threatens to go out *first*,
+    // which would bust our partner's (Grand) Tichu. Don't just sit there — beat them
+    // with the cheapest move that doesn't make us go out (a bomb only as a last
+    // resort, when they're very low).
+    const owner = state.trick.owner;
+    const oppNearOut =
+      owner !== null && owner !== partner && state.players[owner].hand.length <= 5;
+    if (oppNearOut) {
+      const cheapBeat = nonBomb.find((m) => m.cards.length < hand.length);
+      if (cheapBeat) return { play: cheapBeat.cards.map((c) => c.id) };
+      const bomb = usable.find((m) => m.bombLevel > 0 && m.cards.length < hand.length);
+      if (bomb && state.players[owner].hand.length <= 2) {
+        return { play: bomb.cards.map((c) => c.id) };
+      }
+    }
+
+    // Otherwise spend a cheap card to seize the lead if we hold the Dog (next turn we
+    // lead it to hand the partner control); failing that, stay passive and pass.
     const grab = nonBomb[0];
     const worthSeizingLead =
       dog &&
