@@ -903,6 +903,14 @@ input:focus {
   text-overflow: ellipsis;
 }
 
+.seatstrip__host {
+  margin-right: 0.2rem;
+}
+
+.seatstrip__name .scoreboard__rank {
+  margin-left: 0.3rem;
+}
+
 .seatstrip__meta {
   display: flex;
   gap: 0.25rem;

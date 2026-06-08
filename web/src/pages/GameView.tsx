@@ -43,6 +43,12 @@ export function GameView({ view, room, onLeave }: Props) {
     return (seat: Seat) => map.get(seat) ?? true;
   }, [room.players]);
 
+  const hostOf = useMemo(() => {
+    const map = new Map<Seat, boolean>();
+    for (const p of room.players) if (p.seat !== null) map.set(p.seat, p.isHost);
+    return (seat: Seat) => map.get(seat) ?? false;
+  }, [room.players]);
+
   // Transient emote bubbles per seat. `key` lets the same seat re-trigger the
   // pop animation (React remounts the bubble when the key changes).
   const [emotes, setEmotes] = useState<Partial<Record<Seat, { emoji: string; key: number }>>>({});
@@ -72,7 +78,13 @@ export function GameView({ view, room, onLeave }: Props) {
   return (
     <div className="game">
       <MatchBar view={view} />
-      <SeatStrip view={view} nameOf={nameOf} connectedOf={connectedOf} emoteOf={emoteOf} />
+      <SeatStrip
+        view={view}
+        nameOf={nameOf}
+        connectedOf={connectedOf}
+        hostOf={hostOf}
+        emoteOf={emoteOf}
+      />
 
       {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
       {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
@@ -249,11 +261,13 @@ function SeatStrip({
   view,
   nameOf,
   connectedOf,
+  hostOf,
   emoteOf,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   connectedOf: (s: Seat) => boolean;
+  hostOf: (s: Seat) => boolean;
   emoteOf: (s: Seat) => { emoji: string; key: number } | undefined;
 }) {
   const relation = (seat: Seat): string => {
@@ -270,6 +284,8 @@ function SeatStrip({
         const offline = !connectedOf(s.seat);
         const emote = emoteOf(s.seat);
         const team = seatTeam(s.seat); // 'A' (seats 0·2) or 'B' (seats 1·3)
+        // Finishing place, shown next to the name once a player goes out mid-hand.
+        const place = view.phase === 'playing' && s.finished ? rankOf(view, s.seat) : 0;
         return (
           <div
             key={s.seat}
@@ -286,7 +302,20 @@ function SeatStrip({
               <span className="seatstrip__team">팀 {team}</span> · {relation(s.seat)}
             </div>
             <div className="seatstrip__name">
+              {hostOf(s.seat) && (
+                <span className="seatstrip__host" title="방장">
+                  👑
+                </span>
+              )}
               {nameOf(s.seat)}
+              {place > 0 && (
+                <span
+                  className={`scoreboard__rank${place > 3 ? ' scoreboard__rank--num' : ''}`}
+                  title={`${place}등`}
+                >
+                  {rankLabelText(place)}
+                </span>
+              )}
               {offline && <span className="badge badge--offline">오프라인</span>}
             </div>
             <div className="seatstrip__meta">
