@@ -708,6 +708,12 @@ function comboLabel(c: Combination): string {
   if (c.type === 'straight' || c.type === 'stairs' || c.type === 'straightbomb') {
     return `${base} ~${r} (${c.length}장)`;
   }
+  // A single special card reads by name (e.g. 용/참새) rather than a numeric rank.
+  const single = c.cards[0];
+  if (c.type === 'single' && single?.kind === 'special') {
+    const name = single.name === 'mahjong' ? '참새' : cardText(single);
+    return `${base} ${name}`;
+  }
   return `${base} ${r}`;
 }
 
