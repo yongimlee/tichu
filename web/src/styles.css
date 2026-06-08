@@ -974,22 +974,32 @@ input:focus {
   font-size: 1.4rem;
 }
 
-/* Cards on the table (trick) are a touch smaller than the hand. They keep full
-   size for normal plays and only shrink so a long play (up to 14) stays one row. */
+/* Hand cards: a touch smaller than before (48px). On small screens they shrink
+   further so up to 7 fit per row (see the max-width media query below). */
+.hand .card {
+  width: 48px;
+  aspect-ratio: 52 / 93;
+  height: auto;
+  container-type: inline-size; /* card text scales with card width via cqw */
+}
+
+/* Cards on the table (trick) are a touch smaller than the hand. They keep a fixed,
+   readable size and wrap to the next row if a play is too wide for one line. */
 .trick__cards .card {
-  flex: 0 1 44px;
+  flex: 0 0 44px; /* fixed, readable size — never shrinks */
   width: 44px;
   aspect-ratio: 52 / 93;
   height: auto;
-  min-width: 0; /* let cards shrink below content size so a long play fits one row */
   container-type: inline-size; /* card text scales with card width via cqw */
   cursor: default;
 }
 
-/* Trick card text scales with the card so it stays legible as cards shrink. */
+/* Card text scales with the card so it stays legible as cards shrink. */
+.hand .card__rank,
 .trick__cards .card__rank {
   font-size: 46cqw;
 }
+.hand .card__glyph,
 .trick__cards .card__glyph {
   font-size: 50cqw;
 }
@@ -1145,6 +1155,7 @@ input:focus {
 
 .trick__cards {
   display: flex;
+  flex-wrap: wrap; /* 한 줄에 다 안 들어가면(넓은 화면 기준 14장 초과) 다음 줄로 */
   gap: 0.3rem;
 }
 
@@ -1175,5 +1186,10 @@ input:focus {
 @media (max-width: 480px) {
   .teams {
     grid-template-columns: 1fr;
+  }
+
+  /* Small screens: size hand cards so up to 7 fit per row (a 14-card hand → 2 rows). */
+  .hand .card {
+    width: calc((100% - 6 * 0.4rem) / 7);
   }
 }
