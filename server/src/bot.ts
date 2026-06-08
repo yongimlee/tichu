@@ -197,11 +197,16 @@ function chooseWish(hand: Card[]): number | undefined {
 }
 
 /**
- * Decide a bot's play. Priorities: go out if possible → don't beat your own
- * partner → don't break up a bomb → conserve the Dragon on cheap tricks →
- * otherwise the cheapest beating combo (or pass / bomb only when forced).
+ * Decide a bot's play. Priorities: go out if possible → cooperate with a partner's
+ * Tichu (don't go out first; use the Dog to hand them the lead) → disrupt an
+ * opponent's Tichu (beat the declarer, even spending the Dragon/a bomb) → don't beat
+ * your own partner → don't break up a bomb → conserve the Dragon on cheap tricks →
+ * otherwise the cheapest beating combo (or pass / bomb only when worth it).
  */
-function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; wish?: number } {
+export function botMove(
+  state: GameState,
+  seat: Seat,
+): { play?: string[]; pass?: true; wish?: number } {
   const hand = state.players[seat].hand;
   const top = state.trick.top;
   const leading = !top;
@@ -213,6 +218,23 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
   const helpPartnerTichu =
     (state.players[partner].tichu || state.players[partner].grandTichu) &&
     state.finished.length === 0;
+
+  // Disrupt an *opponent's* Tichu: their bonus also requires going out first, so as
+  // long as it's still live (and we aren't busy protecting our own partner's) we
+  // play to deny — keep going out as the top priority, and when the declarer is the
+  // one winning the trick, beat them rather than conserving (see below). Going out
+  // first or stripping their control is what cancels the bonus.
+  const declaredLiveTichu = (s: Seat) => state.players[s].tichu || state.players[s].grandTichu;
+  const leftOpp = nextSeat(seat);
+  const rightOpp = prevSeat(seat); // both are opponents (partner sits opposite)
+  const denyOppTichu =
+    !helpPartnerTichu &&
+    state.finished.length === 0 &&
+    (declaredLiveTichu(leftOpp) || declaredLiveTichu(rightOpp));
+  const ownerIsLiveOppDeclarer =
+    state.trick.owner !== null &&
+    (state.trick.owner === leftOpp || state.trick.owner === rightOpp) &&
+    declaredLiveTichu(state.trick.owner);
 
   let moves = enumerateMoves(hand, top);
   let mustPlayForWish = false;
@@ -283,9 +305,16 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
 
   const cheapest = nonBomb[0];
   if (cheapest) {
-    // Hold the Dragon rather than burn it on a near-worthless trick.
+    // Hold the Dragon rather than burn it on a near-worthless trick — but spend it
+    // anyway to wrest the lead from an opponent who declared a (still live) Tichu.
     const spendsDragon = cheapest.type === 'single' && cheapest.rank >= DRAGON_RANK;
-    if (spendsDragon && !mustPlayForWish && trickPoints(state) < 10 && hand.length > 4) {
+    const conserveDragon =
+      spendsDragon &&
+      !mustPlayForWish &&
+      trickPoints(state) < 10 &&
+      hand.length > 4 &&
+      !(denyOppTichu && ownerIsLiveOppDeclarer);
+    if (conserveDragon) {
       return { pass: true };
     }
     return { play: cheapest.cards.map((c) => c.id) };
@@ -301,7 +330,11 @@ function botMove(state: GameState, seat: Seat): { play?: string[]; pass?: true; 
       const owner = state.trick.owner;
       const ownerNearOut =
         owner !== null && owner !== seat && state.players[owner].hand.length <= 2;
-      if (trickPoints(state) >= 10 || ownerNearOut) {
+      // Spending a bomb to deny an opponent's Tichu (worth ±100/200) is good value,
+      // so bomb the declarer once they're getting low even on a cheap trick.
+      const denyDeclarerBomb =
+        denyOppTichu && ownerIsLiveOppDeclarer && state.players[owner as Seat].hand.length <= 5;
+      if (trickPoints(state) >= 10 || ownerNearOut || denyDeclarerBomb) {
         return { play: bomb.cards.map((c) => c.id) };
       }
     }

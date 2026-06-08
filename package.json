@@ -14,6 +14,7 @@
     "dev:web": "npm run dev -w @tichu/web",
     "build": "npm run build -w @tichu/web",
     "start": "npm start -w @tichu/server",
+    "test": "npm test -w @tichu/shared && npm test -w @tichu/server",
     "typecheck": "npm run typecheck -w @tichu/shared && npm run typecheck -w @tichu/server && npm run typecheck -w @tichu/web"
   },
   "devDependencies": {
