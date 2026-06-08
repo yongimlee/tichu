@@ -5,9 +5,10 @@ import {
   type Card,
   type Combination,
   type GameState,
+  type Room,
   type Seat,
 } from '@tichu/shared';
-import { botMove } from './bot';
+import { botMove, pendingBotAction } from './bot';
 
 // Regression coverage for the bot's cooperative/strategic decisions. We build a
 // minimal GameState and call botMove directly (seat 1 is always the bot): partner
@@ -154,6 +155,40 @@ test("spends the Dragon to deny an opponent's live Tichu", () => {
     owner: 0,
   });
   assert.deepEqual(move(s).play, ['dragon']);
+});
+
+// --- pendingBotAction: bots AND disconnected humans get auto-played ---
+
+type SeatKind = 'human-online' | 'human-offline' | 'bot';
+function mkRoom(kinds: [SeatKind, SeatKind, SeatKind, SeatKind]): Room {
+  return {
+    code: 'TEST',
+    players: kinds.map((kind, seat) => ({
+      id: `p${seat}`,
+      nickname: `P${seat}`,
+      seat: seat as Seat,
+      isHost: seat === 0,
+      isBot: kind === 'bot',
+      connected: kind !== 'human-offline',
+    })),
+  } as unknown as Room;
+}
+
+const playingState = () => mkState({ hands: [[], [], [], []] }); // turn = seat 1
+
+test('auto-plays a disconnected human on their turn', () => {
+  const room = mkRoom(['human-online', 'human-offline', 'human-online', 'bot']);
+  assert.deepEqual(pendingBotAction(room, playingState()), { type: 'move', seat: 1 });
+});
+
+test('does NOT auto-play an online human on their turn', () => {
+  const room = mkRoom(['human-online', 'human-online', 'human-online', 'bot']);
+  assert.equal(pendingBotAction(room, playingState()), null);
+});
+
+test('auto-plays a bot on their turn', () => {
+  const room = mkRoom(['human-online', 'bot', 'human-online', 'human-online']);
+  assert.deepEqual(pendingBotAction(room, playingState()), { type: 'move', seat: 1 });
 });
 
 test("bombs to deny a low opponent's live Tichu even on a cheap trick", () => {

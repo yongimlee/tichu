@@ -39,6 +39,10 @@ type TichuServer = Server<
 
 const SEATS: Seat[] = [0, 1, 2, 3];
 const BOT_DELAY_MS = 700;
+// How long to wait before a bot covers a *disconnected human's* turn. Longer than a
+// bot's own delay so a quick reconnect (mobile backgrounding, network blip) takes
+// control back before the bot steps in, while a real drop doesn't stall the table.
+const OFFLINE_TAKEOVER_MS = 8000;
 
 function concreteRank(c: Card): number | null {
   if (c.kind === 'suit') return c.rank;
@@ -396,20 +400,26 @@ type BotAction =
   | { type: 'move'; seat: Seat };
 
 export function pendingBotAction(room: Room, state: GameState): BotAction | null {
-  const isBot = (seat: Seat) => room.players.find((p) => p.seat === seat)?.isBot ?? false;
+  // A seat is auto-played when a bot sits there, or when its human has dropped
+  // offline — so a mid-hand disconnect doesn't stall the whole table; a bot covers
+  // the turn until they reconnect and take control back.
+  const isAuto = (seat: Seat) => {
+    const p = room.players.find((pl) => pl.seat === seat);
+    return p ? p.isBot || !p.connected : false;
+  };
   if (state.phase === 'grand-tichu') {
-    const seat = SEATS.find((s) => isBot(s) && !state.players[s].decidedGrandTichu);
+    const seat = SEATS.find((s) => isAuto(s) && !state.players[s].decidedGrandTichu);
     return seat === undefined ? null : { type: 'grand', seat };
   }
   if (state.phase === 'exchange') {
-    const seat = SEATS.find((s) => isBot(s) && state.players[s].exchange === null);
+    const seat = SEATS.find((s) => isAuto(s) && state.players[s].exchange === null);
     return seat === undefined ? null : { type: 'exchange', seat };
   }
   if (state.phase === 'playing') {
-    if (state.pendingDragon && isBot(state.pendingDragon.winner)) {
+    if (state.pendingDragon && isAuto(state.pendingDragon.winner)) {
       return { type: 'dragon', seat: state.pendingDragon.winner };
     }
-    if (state.turn !== null && isBot(state.turn)) return { type: 'move', seat: state.turn };
+    if (state.turn !== null && isAuto(state.turn)) return { type: 'move', seat: state.turn };
   }
   return null;
 }
@@ -443,16 +453,28 @@ export class BotDriver {
     private readonly games: GameManager,
   ) {}
 
-  /** Ask the driver to act for a room if a bot is up next (debounced per room). */
+  /**
+   * Ask the driver to act for a room if a bot — or a disconnected human's stand-in
+   * bot — is up next (debounced per room).
+   */
   kick(code: string): void {
     if (this.timers.has(code)) return;
     const room = this.rooms.getRoom(code);
     const state = this.games.getState(code);
-    if (!room || !state || !pendingBotAction(room, state)) return;
+    if (!room || !state) return;
+    const action = pendingBotAction(room, state);
+    if (!action) return;
+    // Don't churn a game nobody is watching: if every human has dropped, let the
+    // room sit. It resumes on reconnect, or the room manager purges it.
+    if (!room.players.some((p) => !p.isBot && p.connected)) return;
+    // A real bot moves quickly; covering for an offline human waits longer so a
+    // quick reconnect can take the turn back first.
+    const acting = room.players.find((p) => p.seat === action.seat);
+    const delay = acting && !acting.isBot ? OFFLINE_TAKEOVER_MS : BOT_DELAY_MS;
     const timer = setTimeout(() => {
       this.timers.delete(code);
       this.step(code);
-    }, BOT_DELAY_MS);
+    }, delay);
     timer.unref?.();
     this.timers.set(code, timer);
   }

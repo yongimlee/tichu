@@ -286,7 +286,10 @@ export function registerSocketHandlers(
 
   socket.on('disconnect', () => {
     const room = rooms.disconnect(socket.id);
-    if (room) emitRoom(room.code);
+    if (room) {
+      emitRoom(room.code);
+      bots.kick(room.code); // if it's now an offline player's turn, a bot covers it
+    }
   });
 }
 
