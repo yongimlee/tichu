@@ -929,7 +929,7 @@ input:focus {
 /* Hand + cards */
 .hand {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* keep the whole hand (up to 14) on one row; cards shrink to fit */
   justify-content: center;
   align-items: flex-end;
   gap: 0.4rem;
@@ -943,8 +943,11 @@ input:focus {
 .trick__cards .card {
   /* scoped to actual playing cards — must NOT match .card panels (e.g. .phase) */
   width: 52px;
-  height: 93px; /* matches special-card art aspect (256x455 ≈ 1:1.78) */
+  aspect-ratio: 52 / 93; /* matches special-card art aspect (256x455 ≈ 1:1.78) */
+  height: auto;
   min-height: 0;
+  min-width: 0; /* let flex items shrink below content size so 14 fit one row */
+  container-type: inline-size; /* card text can scale with card width via cqw */
   padding: 0.3rem;
   border-radius: 7px;
   border: 1px solid rgba(0, 0, 0, 0.25);
@@ -974,11 +977,27 @@ input:focus {
   font-size: 1.4rem;
 }
 
-/* Cards shown on the table (trick) are a touch smaller than the hand. */
+/* Hand cards sit at 52px but shrink (never wrap) so a full 14-card hand still
+   fits on one row. Few cards stay full size; many cards compress to fit. */
+.hand .card {
+  flex: 0 1 52px;
+}
+
+/* Cards on the table (trick) are a touch smaller than the hand. They keep full
+   size for normal plays and only shrink so a long play (up to 14) stays one row. */
 .trick__cards .card {
-  width: 46px;
-  height: 82px;
+  flex: 0 1 44px;
   cursor: default;
+}
+
+/* Card face text scales with the card so it stays legible as cards shrink. */
+.hand .card__rank,
+.trick__cards .card__rank {
+  font-size: 46cqw;
+}
+.hand .card__glyph,
+.trick__cards .card__glyph {
+  font-size: 50cqw;
 }
 
 .card__label {
