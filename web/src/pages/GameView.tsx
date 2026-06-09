@@ -364,12 +364,17 @@ function Finished({
         <strong>{scores.B}</strong>
       </div>
 
-      {!isHost && <p className="hint">방장이 다시 시작하거나 새 방을 열 수 있어요.</p>}
+      {!isHost && (
+        <p className="hint">방장이 다시 시작하거나 자리를 다시 배치하거나 새 방을 열 수 있어요.</p>
+      )}
       <div className="actions actions--row">
         {isHost && (
           <>
             <button className="btn btn--primary" onClick={() => socket.emit('game:restart')}>
-              처음부터 다시 시작
+              같은 팀으로 다시 시작
+            </button>
+            <button className="btn btn--secondary" onClick={() => socket.emit('game:reseat')}>
+              자리·팀 재배치
             </button>
             <button className="btn btn--secondary" onClick={() => socket.emit('room:close')}>
               새 방 만들기

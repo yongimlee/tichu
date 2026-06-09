@@ -25,6 +25,11 @@ export interface ServerToClientEvents {
   'game:emote': (payload: { seat: Seat; emoji: string }) => void;
   /** The room was closed (e.g. host dissolved it) — clients should return home. */
   'room:closed': () => void;
+  /**
+   * The finished match was torn down but the room lives on (host chose to
+   * re-seat). Clients drop their game view and fall back to the lobby.
+   */
+  'game:closed': () => void;
 }
 
 export interface ClientToServerEvents {
@@ -63,6 +68,11 @@ export interface ClientToServerEvents {
   'game:emote': (payload: { emoji: string }) => void;
   /** Host: reset scores and redeal, keeping the same players (post-game restart). */
   'game:restart': () => void;
+  /**
+   * Host: end the finished match and reopen the lobby with the same players so
+   * they can rearrange seats/teams before starting again.
+   */
+  'game:reseat': () => void;
   /** Host: dissolve the whole room (everyone returns home). */
   'room:close': () => void;
   /** Leave the current room (room is purged once everyone has left). */

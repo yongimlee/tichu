@@ -172,6 +172,19 @@ export class RoomManager {
     return room;
   }
 
+  /**
+   * Reopen the lobby after a finished match, keeping the same players. Human
+   * seats are cleared so everyone re-picks (manual) or gets reshuffled (random);
+   * bots keep their seats so the host doesn't have to re-add them.
+   */
+  reopenLobby(socketId: string): Room {
+    const room = this.requireRoom(socketId);
+    if (room.hostId !== socketId) throw new Error('방장만 자리를 다시 배치할 수 있습니다.');
+    room.status = 'lobby';
+    for (const p of room.players) if (!p.isBot) p.seat = null;
+    return room;
+  }
+
   startGame(socketId: string): Room {
     const room = this.requireRoom(socketId);
     if (room.hostId !== socketId) throw new Error('방장만 게임을 시작할 수 있습니다.');

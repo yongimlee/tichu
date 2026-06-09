@@ -233,6 +233,17 @@ export function registerSocketHandlers(
     }
   });
 
+  socket.on('game:reseat', () => {
+    try {
+      const room = rooms.reopenLobby(socket.id); // status → lobby, human seats cleared
+      games.end(room.code); // drop the finished match
+      io.to(room.code).emit('game:closed'); // clients tear down the game view → lobby
+      emitRoom(room.code);
+    } catch (err) {
+      socket.emit('room:error', { message: errMessage(err) });
+    }
+  });
+
   socket.on('room:close', () => {
     try {
       const room = rooms.getRoomBySocket(socket.id);

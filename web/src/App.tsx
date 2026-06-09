@@ -62,15 +62,20 @@ export function App() {
       setView(null);
       setSelfId('');
     };
+    // The match ended but the room lives on (host re-seating) — drop just the
+    // game view so the lobby (RoomView) shows again. room:update keeps the room.
+    const onGameClosed = () => setView(null);
     socket.on('room:update', onUpdate);
     socket.on('room:error', onError);
     socket.on('game:state', onGameState);
     socket.on('room:closed', onClosed);
+    socket.on('game:closed', onGameClosed);
     return () => {
       socket.off('room:update', onUpdate);
       socket.off('room:error', onError);
       socket.off('game:state', onGameState);
       socket.off('room:closed', onClosed);
+      socket.off('game:closed', onGameClosed);
     };
   }, []);
 
