@@ -1371,11 +1371,11 @@ input:focus {
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 45%, rgba(255, 80, 40, 0.45) 0%, rgba(255, 60, 30, 0) 60%);
+  background: radial-gradient(circle at 50% 45%, rgba(255, 80, 40, 0.45) 0%, rgba(255, 60, 30, 0) 45%);
   animation: bomb-flash-fade 0.7s ease-out forwards;
 }
 .bomb-flash__text {
-  font-size: clamp(2.5rem, 12vw, 5rem);
+  font-size: clamp(1.875rem, 9vw, 3.75rem);
   font-weight: 900;
   letter-spacing: 0.05em;
   color: #ff5a3c;

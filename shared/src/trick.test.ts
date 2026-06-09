@@ -72,9 +72,15 @@ test('the Dog hands the lead to the partner', () => {
 
 test('a bomb flags a one-shot announce naming the bomber and level', () => {
   const four7 = [c(7, 'jade'), c(7, 'sword'), c(7, 'pagoda'), c(7, 'star')];
-  const s = playing([four7, [c(3)], [c(4)], [c(5)]]);
-  playCards(s, 0, ['jade-7', 'sword-7', 'pagoda-7', 'star-7']);
-  assert.deepEqual(s.announce, { kind: 'bomb', from: 0, level: 1 });
+  // Seat 0 leads a single; seat 1 drops a four-of-a-kind bomb on it.
+  const s = playing([[c(9)], four7, [c(4)], [c(5)]], 0);
+  playCards(s, 0, ['jade-9']);
+  playCards(s, 1, ['jade-7', 'sword-7', 'pagoda-7', 'star-7']);
+  assert.deepEqual(s.announce, { kind: 'bomb', from: 1, level: 1 });
+  // The announce must ride exactly one snapshot: a following pass clears it, so it
+  // doesn't re-fire the client visual on every pass after the bomb.
+  pass(s, 2);
+  assert.equal(s.announce, null);
 });
 
 test('a Dragon-won trick is given to a chosen opponent', () => {

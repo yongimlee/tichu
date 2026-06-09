@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type {
   Card,
   GamePhase,
@@ -284,7 +284,7 @@ const PHASES: { key: Scenario; label: string }[] = [
 
 const noop = () => {};
 
-function renderScenario(scenario: Scenario) {
+function renderScenario(scenario: Scenario, gameView: PlayerView | null) {
   switch (scenario) {
     case 'home':
       return <Home onJoined={noop} onError={noop} />;
@@ -293,12 +293,19 @@ function renderScenario(scenario: Scenario) {
     case 'lobby-random':
       return <RoomView room={lobbyRandom} selfId="p0" onLeave={noop} />;
     default:
-      return <GameView view={buildView(scenario)} room={room} onLeave={noop} />;
+      return gameView && <GameView view={gameView} room={room} onLeave={noop} />;
   }
 }
 
+const isGameScenario = (s: Scenario): s is GameScenario =>
+  s !== 'home' && s !== 'lobby-manual' && s !== 'lobby-random';
+
 export function Demo() {
   const [phase, setPhase] = useState<Scenario>('home');
+  // Build the game view once per scenario. Rebuilding it on every render (e.g. an
+  // unrelated App re-render from the head-pat button) would hand GameView a fresh
+  // `announce` object and wrongly re-fire its one-shot Dog/bomb effects.
+  const gameView = useMemo(() => (isGameScenario(phase) ? buildView(phase) : null), [phase]);
   return (
     <div>
       <div
@@ -328,7 +335,7 @@ export function Demo() {
           원하는 숫자를 눌러 소원을 정할 수 있어요.
         </p>
       )}
-      {renderScenario(phase)}
+      {renderScenario(phase, gameView)}
     </div>
   );
 }

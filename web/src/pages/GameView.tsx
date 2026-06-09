@@ -73,32 +73,34 @@ export function GameView({ view, room, onLeave }: Props) {
     showEmote(view.selfSeat, emoji); // optimistic — instant feedback (and works in the demo)
   };
 
-  // One-shot "Dog handoff" visual. The Dog leaves no card on the table, so the
-  // server flags the play via view.announce (carried on a single snapshot); we
-  // latch it into timed state so the toast + trick overlay last a fixed beat.
+  // One-shot announce visuals. The Dog leaves no card on the table and a bomb is a
+  // dramatic interrupt; the server flags each via view.announce on a SINGLE
+  // snapshot. We latch it into timed flash state here, and dismiss it in separate
+  // effects below. Keeping the dismiss timer in this latch effect would be a bug:
+  // the very next snapshot (announce=null) re-runs the effect, whose cleanup would
+  // clearTimeout the pending dismiss — leaving the visual stuck on every trick.
   const [dogFlash, setDogFlash] = useState<{ from: Seat; to: Seat; key: number } | null>(null);
-  useEffect(() => {
-    const a = view.announce;
-    if (!a || a.kind !== 'dog') return;
-    const key = Date.now();
-    setDogFlash({ from: a.from, to: a.to, key });
-    const t = setTimeout(() => setDogFlash((cur) => (cur?.key === key ? null : cur)), 2600);
-    return () => clearTimeout(t);
-  }, [view.announce]);
-
-  // One-shot "bomb" visual: a screen shake + full-screen flash + toast naming the
-  // bomber and level, plus a pulse on the bomb cards (threaded into the trick).
   const [bombFlash, setBombFlash] = useState<{ from: Seat; level: number; key: number } | null>(
     null,
   );
   useEffect(() => {
     const a = view.announce;
-    if (!a || a.kind !== 'bomb') return;
-    const key = Date.now();
-    setBombFlash({ from: a.from, level: a.level, key });
-    const t = setTimeout(() => setBombFlash((cur) => (cur?.key === key ? null : cur)), 2600);
-    return () => clearTimeout(t);
+    if (a?.kind === 'dog') setDogFlash({ from: a.from, to: a.to, key: Date.now() });
+    else if (a?.kind === 'bomb') setBombFlash({ from: a.from, level: a.level, key: Date.now() });
   }, [view.announce]);
+
+  // Auto-dismiss — driven by the flash state itself, so an incoming announce=null
+  // snapshot can't cancel the timer (the cause of the "stuck on every trick" bug).
+  useEffect(() => {
+    if (!dogFlash) return;
+    const t = setTimeout(() => setDogFlash(null), 2600);
+    return () => clearTimeout(t);
+  }, [dogFlash]);
+  useEffect(() => {
+    if (!bombFlash) return;
+    const t = setTimeout(() => setBombFlash(null), 2600);
+    return () => clearTimeout(t);
+  }, [bombFlash]);
 
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;

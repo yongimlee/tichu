@@ -297,6 +297,10 @@ export function pass(state: GameState, seat: Seat): GameState {
   if (state.wish !== null && canFulfillWish(state, seat)) {
     throw new Error(`참새 소원(${state.wish})을 낼 수 있으므로 패스할 수 없습니다.`);
   }
+  // Consume any prior one-shot event. This matters for a bomb, whose announce is
+  // otherwise still set when the following players pass — without clearing it the
+  // event would ride every pass snapshot and re-fire the client visual each time.
+  state.announce = null;
   advanceOrClose(state, seat);
   maybeEndHand(state);
   return state;
