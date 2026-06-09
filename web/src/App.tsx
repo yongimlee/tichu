@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { PlayerView, Room } from '@tichu/shared';
+import type { MatchInfo, PlayerView, Room } from '@tichu/shared';
 import { socket } from './socket';
 import { Home } from './pages/Home';
 import { RoomView } from './pages/RoomView';
@@ -22,6 +22,18 @@ function saveSession(s: Session): void {
 function clearSession(): void {
   localStorage.removeItem(SESSION_KEY);
 }
+
+// Stand-in match for the #demo header so the playtime timer is visible without
+// a running game (the Demo page builds its own PlayerView separately).
+const DEMO_MATCH: MatchInfo = {
+  scores: { A: 120, B: 85 },
+  target: 500,
+  handNumber: 3,
+  winner: null,
+  history: [],
+  startedAt: Date.now() - 1000 * 60 * 23, // 23 minutes in
+  endedAt: null,
+};
 
 export function App() {
   const [room, setRoom] = useState<Room | null>(null);
@@ -148,6 +160,11 @@ export function App() {
             </button>
           </div>
         </div>
+        {room && view ? (
+          <PlayTime match={view.match} />
+        ) : hash === '#demo' ? (
+          <PlayTime match={DEMO_MATCH} />
+        ) : null}
       </header>
 
       {error && <div className="toast toast--error">{error}</div>}
@@ -192,5 +209,29 @@ export function App() {
         )}
       </main>
     </div>
+  );
+}
+
+/**
+ * Total game duration, shown centered in the controls row. Counts up from the
+ * match start and freezes once the game ends (target score reached). Displayed
+ * as HH:MM (시:분) — both server timestamps come from the authoritative match.
+ */
+function PlayTime({ match }: { match: MatchInfo }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (match.endedAt) return; // game over — leave the final time frozen
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [match.endedAt]);
+
+  const end = match.endedAt ?? now;
+  const totalMin = Math.max(0, Math.floor((end - match.startedAt) / 60000));
+  const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+  const mm = String(totalMin % 60).padStart(2, '0');
+  return (
+    <span className="playtime">
+      플레이타임 {hh}:{mm}
+    </span>
   );
 }

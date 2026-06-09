@@ -146,6 +146,8 @@ const match: MatchInfo = {
   target: 500,
   handNumber: 3,
   winner: null,
+  startedAt: Date.now() - 1000 * 60 * 23, // 23 minutes in, for the demo timer
+  endedAt: null,
   history: [
     { hand: 1, delta: { A: 70, B: 30 }, total: { A: 70, B: 30 } },
     { hand: 2, delta: { A: 50, B: 55 }, total: { A: 120, B: 85 } },
@@ -220,7 +222,15 @@ function buildView(scenario: GameScenario): PlayerView {
       };
     }
     case 'finished':
-      return { ...base, match: { ...match, scores: { A: 1010, B: 640 }, winner: 'A' } };
+      return {
+        ...base,
+        match: {
+          ...match,
+          scores: { A: 1010, B: 640 },
+          winner: 'A',
+          endedAt: match.startedAt + 1000 * 60 * 42, // 42-minute demo game
+        },
+      };
     default:
       return base;
   }

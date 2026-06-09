@@ -57,6 +57,17 @@ body {
   margin-top: 0.5rem;
 }
 
+/* Total game duration, on its own centered line below the buttons row. */
+.playtime {
+  display: block;
+  text-align: center;
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted, var(--text));
+  white-space: nowrap;
+}
+
 .leave-btn {
   border: 1px solid var(--danger);
   background: var(--surface);

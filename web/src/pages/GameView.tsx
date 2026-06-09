@@ -673,17 +673,17 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
         ))}
 
       <div className="actions actions--row">
-        <button className="btn btn--primary" disabled={!canPlay} onClick={play}>
-          {isBomb ? '💣 폭탄 투하' : '내기'}
-        </button>
-        <button className="btn" disabled={!myTurn || isLeading} onClick={doPass}>
-          패스
-        </button>
         {!self.hasPlayed && !self.grandTichu && !self.tichu && (
           <button className="btn btn--secondary" onClick={declareTichu}>
             티츄 선언
           </button>
         )}
+        <button className="btn" disabled={!myTurn || isLeading} onClick={doPass}>
+          패스
+        </button>
+        <button className="btn btn--primary" disabled={!canPlay} onClick={play}>
+          {isBomb ? '💣 폭탄 투하' : '내기'}
+        </button>
       </div>
     </section>
   );

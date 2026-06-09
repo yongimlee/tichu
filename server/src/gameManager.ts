@@ -21,6 +21,8 @@ interface MatchRecord {
   winner: TeamId | null;
   settledHand: number; // handNumber whose result has already been added to scores
   history: HandScore[]; // per-hand deltas + running totals, oldest first
+  startedAt: number; // epoch ms when the match began (first hand dealt)
+  endedAt: number | null; // epoch ms when the match finished (winner decided)
 }
 
 export class GameManager {
@@ -35,6 +37,8 @@ export class GameManager {
       winner: null,
       settledHand: 0,
       history: [],
+      startedAt: Date.now(),
+      endedAt: null,
     };
     this.matches.set(code, record);
     return record.state;
@@ -53,6 +57,8 @@ export class GameManager {
       handNumber: r.handNumber,
       winner: r.winner,
       history: r.history,
+      startedAt: r.startedAt,
+      endedAt: r.endedAt,
     };
   }
 
@@ -76,6 +82,7 @@ export class GameManager {
     const { A, B } = r.scores;
     if ((A >= r.target || B >= r.target) && A !== B) {
       r.winner = A > B ? 'A' : 'B';
+      r.endedAt = Date.now();
       r.state.phase = 'finished';
     }
   }

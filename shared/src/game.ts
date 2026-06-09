@@ -76,6 +76,8 @@ export interface MatchInfo {
   handNumber: number;
   winner: TeamId | null;
   history: HandScore[]; // settled hands so far, oldest first
+  startedAt: number; // epoch ms when the match began (first hand dealt)
+  endedAt: number | null; // epoch ms when the match finished, else null
 }
 
 export interface GameState {
@@ -105,7 +107,7 @@ export function startHand(rng: () => number = Math.random): GameState {
   const deck = shuffle(createDeck(), rng);
   const players: PlayerHandState[] = SEATS.map((seat) => ({
     seat,
-    hand: deck.slice(seat * FIRST_DEAL, seat * FIRST_DEAL + FIRST_DEAL),
+    hand: deck.slice(seat * FIRST_DEAL, seat * FIRST_DEAL + FIRST_DEAL).sort(byDisplayOrder),
     grandTichu: false,
     tichu: false,
     decidedGrandTichu: false,
