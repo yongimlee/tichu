@@ -403,9 +403,22 @@ function SeatStrip({
     if (seat === nextSeat(view.selfSeat)) return '왼쪽';
     return '오른쪽';
   };
+  // First-person 2×2 layout: "나" sits bottom-right and the seats run clockwise
+  // (= turn order 나 → 왼쪽 → 파트너 → 오른쪽). Row-major DOM order below maps to
+  //   [파트너] [오른쪽]
+  //   [왼쪽]   [나]
+  // so the partner is diagonally across and each opponent is on my left/right.
+  const bySeat = new Map(view.seats.map((s) => [s.seat, s]));
+  const order: Seat[] = [
+    partnerSeat(view.selfSeat), // 파트너 → top-left (across)
+    prevSeat(view.selfSeat), // 오른쪽 → top-right
+    nextSeat(view.selfSeat), // 왼쪽 → bottom-left
+    view.selfSeat, // 나 → bottom-right
+  ];
+  const orderedSeats = order.map((seat) => bySeat.get(seat)).filter((s) => s !== undefined);
   return (
     <div className="seatstrip">
-      {view.seats.map((s) => {
+      {orderedSeats.map((s) => {
         const isTurn = view.phase === 'playing' && s.seat === view.turn;
         const isDragon = view.phase === 'playing' && s.seat === view.pendingDragon;
         const offline = !connectedOf(s.seat);
@@ -1016,7 +1029,7 @@ function capturedPoints(cards: Card[]): number {
  */
 function CardBackStack({ count }: { count: number }) {
   const shown = Math.min(count, 10);
-  const perRow = 5;
+  const perRow = 10; // single row — the captured pile stays on one line
   const rows: number[] = [];
   for (let i = 0; i < shown; i += perRow) rows.push(Math.min(perRow, shown - i));
   return (

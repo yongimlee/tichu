@@ -637,7 +637,9 @@ input:focus {
 /* Seat strip */
 .seatstrip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Two columns for the first-person 2×2 table view (see SeatStrip): 나 bottom-
+     right, partner diagonally across, opponents to my left/right, clockwise. */
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
 
@@ -1257,6 +1259,14 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Keep the heading ("플레이") on one line; without this, a long turntag (e.g.
+   the Dragon hand-off message with a long nickname) squeezes the heading and
+   Korean wraps between syllables. */
+.phase__head h2 {
+  flex: 0 0 auto;
 }
 
 .turntag {
@@ -1265,6 +1275,8 @@ input:focus {
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--muted);
+  min-width: 0; /* let the pill take the remaining width and wrap its own text */
+  text-align: center;
 }
 
 .turntag--mine {
