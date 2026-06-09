@@ -150,9 +150,10 @@ export function declareGrandTichu(state: GameState, seat: Seat, declare: boolean
   if (player.decidedGrandTichu) throw new Error('이미 라지 티츄를 결정했습니다.');
   player.decidedGrandTichu = true;
   player.grandTichu = declare;
-  // Fire the call visual only on an actual declaration (a fresh object rides the
-  // emitted snapshot; declining leaves any prior announce untouched).
-  if (declare) state.announce = { kind: 'tichu', from: seat, grand: true };
+  // Consume any prior one-shot announce and flag this call only on an actual
+  // declaration. Without the reset, a declined decision (e.g. every bot deciding)
+  // would re-emit the previous caller's announce and re-fire the visual each time.
+  state.announce = declare ? { kind: 'tichu', from: seat, grand: true } : null;
   if (state.players.every((p) => p.decidedGrandTichu)) {
     dealRemainder(state);
   }
@@ -172,6 +173,9 @@ export function submitExchange(state: GameState, seat: Seat, selection: Exchange
   }
 
   player.exchange = selection;
+  // Consume any prior one-shot announce (e.g. a Tichu call made during exchange)
+  // so it isn't re-emitted — and re-fired on the client — by each later submit.
+  state.announce = null;
   if (state.players.every((p) => p.exchange)) {
     resolveExchange(state);
   }
@@ -318,6 +322,7 @@ export function giveDragon(state: GameState, seat: Seat, toSeat: Seat): GameStat
   if (pending.winner !== seat) throw new Error('용 카드를 획득한 플레이어만 선택할 수 있습니다.');
   if (seatTeam(toSeat) === seatTeam(seat)) throw new Error('상대 팀에게 넘겨야 합니다.');
 
+  state.announce = null; // consume any prior one-shot (e.g. a Tichu called mid-wait)
   state.captured[toSeat].push(...pending.cards);
   state.pendingDragon = null;
   state.trick = emptyTrick(); // the Dragon trick was kept on the table for display

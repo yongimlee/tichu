@@ -72,6 +72,11 @@ test('a small Tichu can be declared during the exchange phase', () => {
   assert.equal(state.players[1].tichu, true);
   // The declaration flags a one-shot announce for the client call visual.
   assert.deepEqual(state.announce, { kind: 'tichu', from: 1, grand: false });
+  // …and the next exchange submit consumes it, so it isn't re-emitted (and
+  // re-fired on the client) by each subsequent player's submit.
+  const [a, b, c] = state.players[0].hand;
+  submitExchange(state, 0, { toLeft: a.id, toPartner: b.id, toRight: c.id });
+  assert.equal(state.announce, null);
 });
 
 test('declaring Large Tichu flags a one-shot announce; declining does not', () => {
@@ -80,6 +85,10 @@ test('declaring Large Tichu flags a one-shot announce; declining does not', () =
   assert.equal(state.announce, null); // declining leaves no announce
   declareGrandTichu(state, 1, true);
   assert.deepEqual(state.announce, { kind: 'tichu', from: 1, grand: true });
+  // A later decision (e.g. a bot declining) consumes the announce so the client
+  // doesn't re-fire the call visual on every subsequent decision.
+  declareGrandTichu(state, 2, false);
+  assert.equal(state.announce, null);
 });
 
 test('a small Tichu cannot be declared during the grand-tichu (8-card) phase', () => {
