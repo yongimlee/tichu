@@ -80,6 +80,19 @@ export interface MatchInfo {
   endedAt: number | null; // epoch ms when the match finished, else null
 }
 
+/**
+ * A one-shot notable event for clients to animate. Some moves (the Dog) resolve
+ * instantly and leave no trace in the trick, so the server flags them here for a
+ * transient visual. It is set on the move that triggers it and cleared by the
+ * next move, so it rides exactly one emitted snapshot — clients fire their effect
+ * whenever a non-null announce arrives.
+ */
+export interface GameAnnounce {
+  kind: 'dog';
+  from: Seat; // who played the special card
+  to: Seat; // who received the lead
+}
+
 export interface GameState {
   phase: GamePhase;
   players: PlayerHandState[]; // index === seat (0..3)
@@ -92,6 +105,7 @@ export interface GameState {
   finished: Seat[]; // order in which players ran out of cards
   pendingDragon: PendingDragon | null; // a Dragon-won trick awaiting the winner's gift choice
   result: HandResult | null; // set once the hand reaches the scoring phase
+  announce: GameAnnounce | null; // transient event for client animation (e.g. Dog handoff)
 }
 
 const SEATS: Seat[] = [0, 1, 2, 3];
@@ -126,6 +140,7 @@ export function startHand(rng: () => number = Math.random): GameState {
     finished: [],
     pendingDragon: null,
     result: null,
+    announce: null,
   };
 }
 
@@ -192,6 +207,7 @@ export function playCards(
 ): GameState {
   if (state.phase !== 'playing') throw new Error('지금은 플레이 단계가 아닙니다.');
   if (state.pendingDragon) throw new Error('용 카드 트릭을 넘겨줄 상대를 먼저 선택해야 합니다.');
+  state.announce = null; // consume any prior one-shot event before this move resolves
   const player = state.players[seat];
   const cards = resolveCards(player, cardIds);
 
@@ -213,7 +229,11 @@ export function playCards(
     markFinished(state, seat);
     state.trick = emptyTrick();
     if (!maybeEndHand(state)) {
-      state.turn = handOffTo(state, partnerSeat(seat));
+      const to = handOffTo(state, partnerSeat(seat));
+      state.turn = to;
+      // The Dog leaves no card in the trick, so flag the handoff for a transient
+      // client visual ("X played the Dog, lead passes to partner Y").
+      if (to !== null) state.announce = { kind: 'dog', from: seat, to };
     }
     return state;
   }
@@ -328,6 +348,7 @@ export interface PlayerView {
   finished: Seat[];
   pendingDragon: Seat | null; // the seat that must choose a recipient, if any
   result: HandResult | null; // populated in the scoring phase
+  announce: GameAnnounce | null; // transient event for a one-shot client visual
   match: MatchInfo;
 }
 
@@ -358,6 +379,7 @@ export function toPlayerView(state: GameState, seat: Seat, match: MatchInfo): Pl
     finished: state.finished,
     pendingDragon: state.pendingDragon ? state.pendingDragon.winner : null,
     result: state.result,
+    announce: state.announce,
     match,
   };
 }

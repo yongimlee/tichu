@@ -156,12 +156,13 @@ const match: MatchInfo = {
 
 // In-game scenarios: the real phases plus a "Mahjong lead" view (pick a wish)
 // and a "Dragon trick" view (choose who receives the won trick).
-type GameScenario = GamePhase | 'mahjong' | 'dragon';
+type GameScenario = GamePhase | 'mahjong' | 'dragon' | 'dog';
 // All demo scenarios, including the pre-game lobby flow.
 type Scenario = GameScenario | 'home' | 'lobby-manual' | 'lobby-random';
 
 function buildView(scenario: GameScenario): PlayerView {
-  const phase: GamePhase = scenario === 'mahjong' || scenario === 'dragon' ? 'playing' : scenario;
+  const phase: GamePhase =
+    scenario === 'mahjong' || scenario === 'dragon' || scenario === 'dog' ? 'playing' : scenario;
   const base: PlayerView = {
     phase,
     selfSeat: 0,
@@ -175,6 +176,7 @@ function buildView(scenario: GameScenario): PlayerView {
     finished: [],
     pendingDragon: null,
     result: null,
+    announce: null,
     match: { ...match },
   };
 
@@ -199,6 +201,15 @@ function buildView(scenario: GameScenario): PlayerView {
           { seat: 0, type: 'single', cards: [DRAGON] },
         ],
         trickOwner: 0,
+      };
+    case 'dog':
+      // You just led the Dog — it leaves no card on the table and hands the lead
+      // to your partner. The transient announce drives the one-shot visual.
+      return {
+        ...base,
+        turn: 2, // lead passed to partner (seat 2)
+        seats: seats([13, 14, 14, 14]),
+        announce: { kind: 'dog', from: 0, to: 2 },
       };
     case 'playing':
       return {
@@ -245,6 +256,7 @@ const PHASES: { key: Scenario; label: string }[] = [
   { key: 'mahjong', label: '참새 리드(소원)' },
   { key: 'playing', label: '플레이' },
   { key: 'dragon', label: '용 트릭 처리' },
+  { key: 'dog', label: '개 리드 넘김' },
   { key: 'scoring', label: '점수' },
   { key: 'finished', label: '게임 종료' },
 ];

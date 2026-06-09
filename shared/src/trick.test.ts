@@ -63,6 +63,11 @@ test('the Dog hands the lead to the partner', () => {
   assert.equal(s.trick.top, null);
   assert.equal(s.turn, 2, 'partner now leads');
   assert.deepEqual(s.players[0].hand.map((x) => x.id), ['jade-2']);
+  // The Dog leaves no card on the table, so it flags a one-shot handoff event...
+  assert.deepEqual(s.announce, { kind: 'dog', from: 0, to: 2 });
+  // ...which is consumed by the partner's next move.
+  playCards(s, 2, ['jade-4']);
+  assert.equal(s.announce, null);
 });
 
 test('a Dragon-won trick is given to a chosen opponent', () => {

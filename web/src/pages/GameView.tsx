@@ -73,11 +73,30 @@ export function GameView({ view, room, onLeave }: Props) {
     showEmote(view.selfSeat, emoji); // optimistic — instant feedback (and works in the demo)
   };
 
+  // One-shot "Dog handoff" visual. The Dog leaves no card on the table, so the
+  // server flags the play via view.announce (carried on a single snapshot); we
+  // latch it into timed state so the toast + trick overlay last a fixed beat.
+  const [dogFlash, setDogFlash] = useState<{ from: Seat; to: Seat; key: number } | null>(null);
+  useEffect(() => {
+    const a = view.announce;
+    if (!a || a.kind !== 'dog') return;
+    const key = Date.now();
+    setDogFlash({ from: a.from, to: a.to, key });
+    const t = setTimeout(() => setDogFlash((cur) => (cur?.key === key ? null : cur)), 2600);
+    return () => clearTimeout(t);
+  }, [view.announce]);
+
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;
 
   return (
     <div className="game">
+      {dogFlash && (
+        <div className="dog-toast" key={dogFlash.key}>
+          🐕 <strong>{nameOf(dogFlash.from)}</strong> 님이 개를 내고{' '}
+          <strong>{nameOf(dogFlash.to)}</strong> 님에게 리드를 넘겼어요
+        </div>
+      )}
       <MatchBar view={view} />
       <SeatStrip
         view={view}
@@ -89,7 +108,7 @@ export function GameView({ view, room, onLeave }: Props) {
 
       {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
       {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
-      {view.phase === 'playing' && <Playing view={view} nameOf={nameOf} />}
+      {view.phase === 'playing' && <Playing view={view} nameOf={nameOf} dogFlash={dogFlash} />}
       {view.phase === 'scoring' && <Scoring view={view} isHost={isHost} nameOf={nameOf} />}
       {view.phase === 'finished' && <Finished view={view} isHost={isHost} onLeave={onLeave} />}
 
@@ -536,7 +555,15 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
   );
 }
 
-function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => string }) {
+function Playing({
+  view,
+  nameOf,
+  dogFlash,
+}: {
+  view: PlayerView;
+  nameOf: (s: Seat) => string;
+  dogFlash: { from: Seat; to: Seat; key: number } | null;
+}) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
 
@@ -617,7 +644,7 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
         </span>
       </div>
 
-      <TrickArea view={view} nameOf={nameOf} />
+      <TrickArea view={view} nameOf={nameOf} dogFlash={dogFlash} />
 
       {view.wish !== null && (
         <p className="hint">
@@ -689,7 +716,27 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
   );
 }
 
-function TrickArea({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => string }) {
+function TrickArea({
+  view,
+  nameOf,
+  dogFlash,
+}: {
+  view: PlayerView;
+  nameOf: (s: Seat) => string;
+  dogFlash: { from: Seat; to: Seat; key: number } | null;
+}) {
+  // The Dog clears the table and passes the lead — show the handoff while we wait
+  // for the partner to lead (i.e. until a real card lands on the empty table).
+  if (dogFlash && view.trick.length === 0) {
+    return (
+      <div className="dog-handoff" key={dogFlash.key}>
+        <span className="dog-handoff__who">{nameOf(dogFlash.from)}</span>
+        <span className="dog-handoff__card">🐕</span>
+        <span className="dog-handoff__arrow">리드 넘김 ▶</span>
+        <span className="dog-handoff__to">{nameOf(dogFlash.to)}</span>
+      </div>
+    );
+  }
   if (view.trick.length === 0) {
     return <p className="hint">새 트릭 — 리드할 카드를 내세요.</p>;
   }

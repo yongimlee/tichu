@@ -1287,6 +1287,70 @@ input:focus {
   gap: 0.3rem;
 }
 
+/* Dog handoff — the Dog leaves no card on the table, so a transient visual marks
+   the lead passing to the partner (otherwise the play looks like nothing). */
+.dog-handoff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 0.5rem 0;
+  min-height: 120px;
+  padding: 1rem;
+  background: radial-gradient(circle at 50% 30%, #1f3d2e 0%, #16261d 70%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+}
+.dog-handoff__who {
+  color: var(--muted);
+}
+.dog-handoff__card {
+  font-size: 2.4rem;
+  animation: dog-trot 1.3s ease-in-out infinite;
+}
+.dog-handoff__arrow {
+  color: var(--accent);
+  font-weight: 700;
+  animation: dog-arrow 1.2s ease-in-out infinite;
+}
+.dog-handoff__to {
+  color: var(--accent);
+  font-weight: 700;
+}
+@keyframes dog-trot {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  50% { transform: translateX(7px) rotate(5deg); }
+}
+@keyframes dog-arrow {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(5px); }
+}
+
+/* Top banner echoing the handoff, visible even when the eye isn't on the table. */
+.dog-toast {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
+  width: max-content;
+  max-width: 92%;
+  margin: 0 auto 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  text-align: center;
+  font-size: 0.84rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  animation: dog-toast-in 0.25s ease-out;
+}
+@keyframes dog-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Exchange */
 .exchange {
   display: flex;
