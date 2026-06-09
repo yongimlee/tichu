@@ -610,7 +610,7 @@ function Playing({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => stri
         <h2>플레이</h2>
         <span className={`turntag${myTurn ? ' turntag--mine' : ''}`}>
           {view.pendingDragon !== null
-            ? `🐉 ${nameOf(view.pendingDragon)}가 용 카드를 넘기는 중`
+            ? `🐉 ${nameOf(view.pendingDragon)}(이)가 용 카드를 넘기는 중`
             : myTurn
               ? '내 차례'
               : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
