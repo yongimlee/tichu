@@ -575,10 +575,10 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
       <Hand cards={view.hand} selectedIds={new Set(used)} />
       <p className="hint">전체 14장을 확인했으니 지금 티츄(100점)를 선언할 수 있습니다.</p>
       <div className="actions actions--row">
+        <TichuDeclare view={view} />
         <button className="btn btn--primary" disabled={!ready} onClick={submit}>
           카드 건네기
         </button>
-        <TichuDeclare view={view} />
       </div>
     </section>
   );
@@ -597,6 +597,7 @@ function Playing({
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
+  const [showAllSuggest, setShowAllSuggest] = useState(false); // expand the trimmed suggestion list
 
   const self = view.seats[view.selfSeat];
   const myTurn = view.turn === view.selfSeat && view.pendingDragon === null;
@@ -613,6 +614,9 @@ function Playing({
     () => (myTurn ? legalMoves(view.hand, topCombo) : []),
     [myTurn, view.hand, topCombo],
   );
+
+  // Collapse the expanded list again whenever the decision changes (new turn / hand).
+  useEffect(() => setShowAllSuggest(false), [view.hand, topCombo]);
 
   // While a single is on the table you can only beat it with a higher single or
   // a bomb. So restrict to one card at a time — unless the hand actually holds a
@@ -711,7 +715,7 @@ function Playing({
           <div className="suggest">
             <span className="suggest__label">추천 조합 — 누르면 자동 선택됩니다</span>
             <div className="suggest__chips">
-              {suggestions.slice(0, 8).map((c, i) => (
+              {(showAllSuggest ? suggestions : suggestions.slice(0, SUGGEST_LIMIT)).map((c, i) => (
                 <button
                   key={i}
                   type="button"
@@ -721,8 +725,21 @@ function Playing({
                   {comboLabel(c)}
                 </button>
               ))}
-              {suggestions.length > 8 && (
-                <span className="suggest__more">외 {suggestions.length - 8}개</span>
+              {suggestions.length > SUGGEST_LIMIT && (
+                <button
+                  type="button"
+                  className="suggest__toggle"
+                  aria-expanded={showAllSuggest}
+                  onClick={() => setShowAllSuggest((v) => !v)}
+                >
+                  {showAllSuggest ? (
+                    <>접기 <span className="suggest__chevron">▴</span></>
+                  ) : (
+                    <>외 {suggestions.length - SUGGEST_LIMIT}개 더보기{' '}
+                      <span className="suggest__chevron">▾</span>
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>
@@ -804,7 +821,7 @@ function DragonGift({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => s
   return (
     <div className="card phase__inset">
       <p className="hint">🐉 용으로 트릭을 획득했습니다. 어느 상대에게 넘기시겠어요?</p>
-      <div className="actions--row">
+      <div className="actions actions--row">
         {opponents.map((o) => (
           <button
             key={o.seat}
@@ -871,6 +888,23 @@ const TYPE_LABEL: Record<CombinationType, string> = {
   straightbomb: '스트레이트 폭탄',
 };
 
+// Display grouping for suggestions: fewer-card shapes first, so leading the trick
+// shows options grouped by type (singles, then pairs, …). Bombs are ordered last
+// here too, but bombLevel already pushes them behind every non-bomb in the sort.
+const TYPE_ORDER: Record<CombinationType, number> = {
+  single: 0,
+  pair: 1,
+  triple: 2,
+  stairs: 3,
+  fullhouse: 4,
+  straight: 5,
+  bomb: 6,
+  straightbomb: 7,
+};
+
+// How many suggestion chips to show before collapsing the rest behind "더보기".
+const SUGGEST_LIMIT = 8;
+
 function comboLabel(c: Combination): string {
   const base = TYPE_LABEL[c.type];
   const r = rankLabel(c.rank);
@@ -889,8 +923,8 @@ function comboLabel(c: Combination): string {
 /**
  * Legal plays from `hand` against the current `top` (null = leading). Brute-forces
  * card subsets (hand ≤14) through the shared detector, dedupes by logical combo,
- * and sorts cheapest-first (non-bombs, then lower rank, then fewer cards). A hint
- * only — the server remains authoritative on the actual play.
+ * and sorts non-bombs first, grouped by combination type, then cheapest (lowest
+ * rank, fewest cards) within a type. A hint only — the server remains authoritative.
  */
 function legalMoves(hand: Card[], top: Combination | null): Combination[] {
   const n = hand.length;
@@ -909,7 +943,13 @@ function legalMoves(hand: Card[], top: Combination | null): Combination[] {
     seen.add(key);
     out.push(combo);
   }
-  out.sort((a, b) => a.bombLevel - b.bombLevel || a.rank - b.rank || a.length - b.length);
+  out.sort(
+    (a, b) =>
+      a.bombLevel - b.bombLevel || // 1) non-bombs first, bombs last
+      TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || // 2) group by combination type
+      a.rank - b.rank || // 3) cheapest (lowest rank) first within a type
+      a.length - b.length, // 4) then fewer cards
+  );
   return out;
 }
 

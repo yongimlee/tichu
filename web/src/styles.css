@@ -581,9 +581,29 @@ input:focus {
   color: var(--text);
 }
 
-.suggest__more {
+/* Expand/collapse toggle for the trimmed suggestion list. Styled as a dashed
+   pill with a chevron so it reads as an interactive "show more", not a value chip. */
+.suggest__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.75rem;
   color: var(--muted);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.suggest__toggle:hover {
+  color: var(--text);
+  border-color: var(--primary);
+  background: var(--surface-2);
+}
+.suggest__chevron {
+  font-size: 0.7em;
+  line-height: 1;
 }
 
 /* Mahjong wish picker — rank buttons instead of a text input. */
