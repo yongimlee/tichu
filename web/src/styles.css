@@ -1469,6 +1469,53 @@ input:focus {
   50% { transform: scale(1.08); }
 }
 
+/* Tichu call — a celebratory full-screen flash naming the bet, plus a toast.
+   The Large (Grand) Tichu uses a hotter gradient + bigger text. */
+.tichu-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 200, 60, 0.4) 0%, rgba(255, 200, 60, 0) 48%);
+  animation: bomb-flash-fade 0.85s ease-out forwards;
+}
+.tichu-flash--grand {
+  background: radial-gradient(circle at 50% 45%, rgba(255, 150, 40, 0.5) 0%, rgba(255, 120, 30, 0) 50%);
+}
+.tichu-flash__text {
+  font-size: clamp(1.75rem, 8vw, 3.25rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ffce4a;
+  text-shadow: 0 0 16px rgba(255, 200, 70, 0.9), 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: bomb-text-pop 0.85s ease-out forwards;
+}
+.tichu-flash--grand .tichu-flash__text {
+  color: #ff9b3d;
+  text-shadow: 0 0 20px rgba(255, 140, 50, 0.95), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.tichu-toast {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
+  width: max-content;
+  max-width: 92%;
+  margin: 0 auto 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid #ffce4a;
+  color: var(--text);
+  text-align: center;
+  font-size: 0.84rem;
+  box-shadow: 0 6px 18px rgba(255, 190, 60, 0.3);
+  animation: dog-toast-in 0.25s ease-out;
+}
+
 /* Exchange */
 .exchange {
   display: flex;

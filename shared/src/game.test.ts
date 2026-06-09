@@ -70,6 +70,16 @@ test('a small Tichu can be declared during the exchange phase', () => {
   assert.equal(state.phase, 'exchange');
   declareTichu(state, 1);
   assert.equal(state.players[1].tichu, true);
+  // The declaration flags a one-shot announce for the client call visual.
+  assert.deepEqual(state.announce, { kind: 'tichu', from: 1, grand: false });
+});
+
+test('declaring Large Tichu flags a one-shot announce; declining does not', () => {
+  const state = startHand(seededRng(11));
+  declareGrandTichu(state, 0, false);
+  assert.equal(state.announce, null); // declining leaves no announce
+  declareGrandTichu(state, 1, true);
+  assert.deepEqual(state.announce, { kind: 'tichu', from: 1, grand: true });
 });
 
 test('a small Tichu cannot be declared during the grand-tichu (8-card) phase', () => {

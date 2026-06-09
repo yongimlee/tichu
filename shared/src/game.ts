@@ -89,7 +89,8 @@ export interface MatchInfo {
  */
 export type GameAnnounce =
   | { kind: 'dog'; from: Seat; to: Seat } // who played the Dog → who got the lead
-  | { kind: 'bomb'; from: Seat; level: number }; // who bombed + bombLevel (1=4종, 2=스트레이트)
+  | { kind: 'bomb'; from: Seat; level: number } // who bombed + bombLevel (1=4종, 2=스트레이트)
+  | { kind: 'tichu'; from: Seat; grand: boolean }; // who called Tichu (grand=라지 티츄)
 
 export interface GameState {
   phase: GamePhase;
@@ -149,6 +150,9 @@ export function declareGrandTichu(state: GameState, seat: Seat, declare: boolean
   if (player.decidedGrandTichu) throw new Error('이미 라지 티츄를 결정했습니다.');
   player.decidedGrandTichu = true;
   player.grandTichu = declare;
+  // Fire the call visual only on an actual declaration (a fresh object rides the
+  // emitted snapshot; declining leaves any prior announce untouched).
+  if (declare) state.announce = { kind: 'tichu', from: seat, grand: true };
   if (state.players.every((p) => p.decidedGrandTichu)) {
     dealRemainder(state);
   }
@@ -187,6 +191,7 @@ export function declareTichu(state: GameState, seat: Seat): GameState {
   if (player.grandTichu) throw new Error('이미 라지 티츄를 선언했습니다.');
   if (player.tichu) throw new Error('이미 티츄를 선언했습니다.');
   player.tichu = true;
+  state.announce = { kind: 'tichu', from: seat, grand: false }; // one-shot call visual
   return state;
 }
 

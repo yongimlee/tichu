@@ -158,13 +158,17 @@ const match: MatchInfo = {
 
 // In-game scenarios: the real phases plus a "Mahjong lead" view (pick a wish)
 // and a "Dragon trick" view (choose who receives the won trick).
-type GameScenario = GamePhase | 'mahjong' | 'dragon' | 'dog' | 'bomb';
+type GameScenario = GamePhase | 'mahjong' | 'dragon' | 'dog' | 'bomb' | 'tichu';
 // All demo scenarios, including the pre-game lobby flow.
 type Scenario = GameScenario | 'home' | 'lobby-manual' | 'lobby-random';
 
 function buildView(scenario: GameScenario): PlayerView {
   const phase: GamePhase =
-    scenario === 'mahjong' || scenario === 'dragon' || scenario === 'dog' || scenario === 'bomb'
+    scenario === 'mahjong' ||
+    scenario === 'dragon' ||
+    scenario === 'dog' ||
+    scenario === 'bomb' ||
+    scenario === 'tichu'
       ? 'playing'
       : scenario;
   const base: PlayerView = {
@@ -233,6 +237,15 @@ function buildView(scenario: GameScenario): PlayerView {
         trickOwner: 3,
         announce: { kind: 'bomb', from: 3, level: 1 },
       };
+    case 'tichu':
+      // Seat 1 (민준) just called Large Tichu — the announce drives the gold
+      // celebratory flash + toast. The seat already carries the grandTichu badge.
+      return {
+        ...base,
+        turn: 0,
+        seats: seats([14, 14, 14, 14]),
+        announce: { kind: 'tichu', from: 1, grand: true },
+      };
     case 'playing':
       return {
         ...base,
@@ -280,6 +293,7 @@ const PHASES: { key: Scenario; label: string }[] = [
   { key: 'dragon', label: '용 트릭 처리' },
   { key: 'dog', label: '개 리드 넘김' },
   { key: 'bomb', label: '폭탄' },
+  { key: 'tichu', label: '티츄 콜' },
   { key: 'scoring', label: '점수' },
   { key: 'finished', label: '게임 종료' },
 ];

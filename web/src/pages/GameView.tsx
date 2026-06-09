@@ -83,10 +83,14 @@ export function GameView({ view, room, onLeave }: Props) {
   const [bombFlash, setBombFlash] = useState<{ from: Seat; level: number; key: number } | null>(
     null,
   );
+  const [tichuFlash, setTichuFlash] = useState<{ from: Seat; grand: boolean; key: number } | null>(
+    null,
+  );
   useEffect(() => {
     const a = view.announce;
     if (a?.kind === 'dog') setDogFlash({ from: a.from, to: a.to, key: Date.now() });
     else if (a?.kind === 'bomb') setBombFlash({ from: a.from, level: a.level, key: Date.now() });
+    else if (a?.kind === 'tichu') setTichuFlash({ from: a.from, grand: a.grand, key: Date.now() });
   }, [view.announce]);
 
   // Auto-dismiss — driven by the flash state itself, so an incoming announce=null
@@ -101,6 +105,11 @@ export function GameView({ view, room, onLeave }: Props) {
     const t = setTimeout(() => setBombFlash(null), 2600);
     return () => clearTimeout(t);
   }, [bombFlash]);
+  useEffect(() => {
+    if (!tichuFlash) return;
+    const t = setTimeout(() => setTichuFlash(null), 2600);
+    return () => clearTimeout(t);
+  }, [tichuFlash]);
 
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;
@@ -122,6 +131,21 @@ export function GameView({ view, room, onLeave }: Props) {
         <div className="bomb-toast" key={`toast-${bombFlash.key}`}>
           💥 <strong>{nameOf(bombFlash.from)}</strong> 님이{' '}
           {bombFlash.level === 2 ? '스트레이트 폭탄' : '폭탄'}을 터뜨렸어요!
+        </div>
+      )}
+      {tichuFlash && (
+        <div
+          className={`tichu-flash${tichuFlash.grand ? ' tichu-flash--grand' : ''}`}
+          key={tichuFlash.key}
+          aria-hidden="true"
+        >
+          <span className="tichu-flash__text">{tichuFlash.grand ? '라지 티츄!' : '티츄!'}</span>
+        </div>
+      )}
+      {tichuFlash && (
+        <div className="tichu-toast" key={`tichu-${tichuFlash.key}`}>
+          {tichuFlash.grand ? '🎯' : '✨'} <strong>{nameOf(tichuFlash.from)}</strong> 님이{' '}
+          {tichuFlash.grand ? '라지 티츄' : '티츄'}를 선언했어요!
         </div>
       )}
       <MatchBar view={view} />
