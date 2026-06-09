@@ -1,4 +1,4 @@
-import { cardPoints, createDeck, shuffle, type Card } from './cards';
+import { cardPoints, createDeck, rankLabel, shuffle, type Card } from './cards';
 import {
   canBeat,
   detectCombination,
@@ -223,7 +223,7 @@ export function playCards(
   if (state.turn === seat && state.wish !== null) {
     const playsWish = cards.some((c) => concreteRank(c) === state.wish);
     if (!playsWish && canFulfillWish(state, seat)) {
-      throw new Error(`참새 소원(${state.wish})을 이행해야 합니다. 해당 숫자를 포함해서 내세요.`);
+      throw new Error(`참새 소원(${rankLabel(state.wish)})을 이행해야 합니다. 해당 숫자를 포함해서 내세요.`);
     }
   }
 
@@ -304,7 +304,7 @@ export function pass(state: GameState, seat: Seat): GameState {
   requireYourTurn(state, seat);
   if (!state.trick.top) throw new Error('리드할 때는 패스할 수 없습니다.');
   if (state.wish !== null && canFulfillWish(state, seat)) {
-    throw new Error(`참새 소원(${state.wish})을 낼 수 있으므로 패스할 수 없습니다.`);
+    throw new Error(`참새 소원(${rankLabel(state.wish)})을 낼 수 있으므로 패스할 수 없습니다.`);
   }
   // Consume any prior one-shot event. This matters for a bomb, whose announce is
   // otherwise still set when the following players pass — without clearing it the

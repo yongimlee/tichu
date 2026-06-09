@@ -80,6 +80,11 @@ export function baseRank(card: Card): number {
   }
 }
 
+/** Display label for a numeric rank: 11→J, 12→Q, 13→K, 14→A, else the number. */
+export function rankLabel(rank: number): string {
+  return { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' }[rank] ?? String(rank);
+}
+
 /** Fisher–Yates shuffle returning a new array. `rng` is injectable for tests. */
 export function shuffle<T>(items: T[], rng: () => number = Math.random): T[] {
   const a = items.slice();
