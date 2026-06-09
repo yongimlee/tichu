@@ -146,7 +146,7 @@ export function App() {
             <span />
           )}
           <div className="pat">
-            {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다😊💕</div>}
+            {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다🥰</div>}
             <button
               type="button"
               className="pat-btn"
@@ -154,9 +154,9 @@ export function App() {
                 setPraiseAt(Date.now());
                 socket.emit('dev:pat'); // server logs who patted (anon on home)
               }}
-              title="개발자 머리 쓰다듬기"
+              title="개발자 쓰담쓰담"
             >
-              🫶 개발자 머리 쓰다듬기
+              🫳 개발자 쓰담쓰담
             </button>
           </div>
         </div>
