@@ -44,7 +44,9 @@ const FULL_HAND: Card[] = [
   DRAGON,
 ];
 
-const NAMES = ['세호', '민준', '지우', '하린'];
+// seat 0 uses an 8-character nickname (the input maxLength) to verify the
+// seatstrip clips long names with an ellipsis instead of overflowing the layout.
+const NAMES = ['초롱초롱빛나는해', '민준', '지우', '하린'];
 
 const room: Room = {
   code: 'DEMO01',

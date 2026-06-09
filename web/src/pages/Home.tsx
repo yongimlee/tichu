@@ -48,8 +48,8 @@ export function Home({ onJoined, onError }: Props) {
         <input
           id="nickname"
           value={nickname}
-          maxLength={16}
-          placeholder="다른 플레이어에게 보일 이름"
+          maxLength={8}
+          placeholder="다른 플레이어에게 보일 이름 (최대 8자)"
           onChange={(e) => setNickname(e.target.value)}
         />
       </div>

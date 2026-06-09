@@ -643,6 +643,7 @@ input:focus {
 
 .seatstrip__item {
   position: relative; /* anchor for the emote bubble */
+  min-width: 0; /* let the grid track shrink so __name ellipsis can kick in */
   background: var(--surface);
   border: 1px solid var(--border);
   border-top-width: 4px; /* team-coloured accent stripe */
