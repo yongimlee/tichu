@@ -1351,6 +1351,80 @@ input:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Bomb — a dramatic, often out-of-turn interrupt. Screen shake + full-screen
+   flash + a toast naming the bomber, and the bomb cards pulse on the table. */
+.game--bomb {
+  animation: bomb-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes bomb-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+}
+
+.bomb-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 80, 40, 0.45) 0%, rgba(255, 60, 30, 0) 60%);
+  animation: bomb-flash-fade 0.7s ease-out forwards;
+}
+.bomb-flash__text {
+  font-size: clamp(2.5rem, 12vw, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ff5a3c;
+  text-shadow: 0 0 18px rgba(255, 90, 50, 0.9), 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: bomb-text-pop 0.7s ease-out forwards;
+}
+@keyframes bomb-flash-fade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes bomb-text-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  25% { transform: scale(1.15); opacity: 1; }
+  60% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+
+.bomb-toast {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
+  width: max-content;
+  max-width: 92%;
+  margin: 0 auto 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid #ff5a3c;
+  color: var(--text);
+  text-align: center;
+  font-size: 0.84rem;
+  box-shadow: 0 6px 18px rgba(255, 70, 40, 0.3);
+  animation: dog-toast-in 0.25s ease-out;
+}
+
+/* The bomb cards keep pulsing on the table for the duration of the flash. */
+.trick__play--bomb {
+  animation: bomb-pulse 0.6s ease-in-out 3;
+}
+.trick__play--bomb .trick__cards {
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px #ff5a3c, 0 0 16px rgba(255, 90, 50, 0.7);
+}
+@keyframes bomb-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
 /* Exchange */
 .exchange {
   display: flex;

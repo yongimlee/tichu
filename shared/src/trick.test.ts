@@ -70,6 +70,13 @@ test('the Dog hands the lead to the partner', () => {
   assert.equal(s.announce, null);
 });
 
+test('a bomb flags a one-shot announce naming the bomber and level', () => {
+  const four7 = [c(7, 'jade'), c(7, 'sword'), c(7, 'pagoda'), c(7, 'star')];
+  const s = playing([four7, [c(3)], [c(4)], [c(5)]]);
+  playCards(s, 0, ['jade-7', 'sword-7', 'pagoda-7', 'star-7']);
+  assert.deepEqual(s.announce, { kind: 'bomb', from: 0, level: 1 });
+});
+
 test('a Dragon-won trick is given to a chosen opponent', () => {
   const s = playing([[DRAGON, c(2)], [c(3)], [c(4)], [c(5)]]);
   playCards(s, 0, ['dragon']);

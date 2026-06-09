@@ -156,13 +156,15 @@ const match: MatchInfo = {
 
 // In-game scenarios: the real phases plus a "Mahjong lead" view (pick a wish)
 // and a "Dragon trick" view (choose who receives the won trick).
-type GameScenario = GamePhase | 'mahjong' | 'dragon' | 'dog';
+type GameScenario = GamePhase | 'mahjong' | 'dragon' | 'dog' | 'bomb';
 // All demo scenarios, including the pre-game lobby flow.
 type Scenario = GameScenario | 'home' | 'lobby-manual' | 'lobby-random';
 
 function buildView(scenario: GameScenario): PlayerView {
   const phase: GamePhase =
-    scenario === 'mahjong' || scenario === 'dragon' || scenario === 'dog' ? 'playing' : scenario;
+    scenario === 'mahjong' || scenario === 'dragon' || scenario === 'dog' || scenario === 'bomb'
+      ? 'playing'
+      : scenario;
   const base: PlayerView = {
     phase,
     selfSeat: 0,
@@ -211,6 +213,24 @@ function buildView(scenario: GameScenario): PlayerView {
         seats: seats([13, 14, 14, 14]),
         announce: { kind: 'dog', from: 0, to: 2 },
       };
+    case 'bomb':
+      // Seat 3 just dropped a four-of-a-kind bomb on a single — the announce
+      // drives the shake + flash + toast, and the bomb cards pulse in the trick.
+      return {
+        ...base,
+        turn: 0,
+        seats: seats([14, 13, 12, 9]),
+        trick: [
+          { seat: 2, type: 'single', cards: [suit('star', 14)] },
+          {
+            seat: 3,
+            type: 'bomb',
+            cards: [suit('jade', 7), suit('sword', 7), suit('pagoda', 7), suit('star', 7)],
+          },
+        ],
+        trickOwner: 3,
+        announce: { kind: 'bomb', from: 3, level: 1 },
+      };
     case 'playing':
       return {
         ...base,
@@ -257,6 +277,7 @@ const PHASES: { key: Scenario; label: string }[] = [
   { key: 'playing', label: '플레이' },
   { key: 'dragon', label: '용 트릭 처리' },
   { key: 'dog', label: '개 리드 넘김' },
+  { key: 'bomb', label: '폭탄' },
   { key: 'scoring', label: '점수' },
   { key: 'finished', label: '게임 종료' },
 ];

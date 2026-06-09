@@ -86,15 +86,40 @@ export function GameView({ view, room, onLeave }: Props) {
     return () => clearTimeout(t);
   }, [view.announce]);
 
+  // One-shot "bomb" visual: a screen shake + full-screen flash + toast naming the
+  // bomber and level, plus a pulse on the bomb cards (threaded into the trick).
+  const [bombFlash, setBombFlash] = useState<{ from: Seat; level: number; key: number } | null>(
+    null,
+  );
+  useEffect(() => {
+    const a = view.announce;
+    if (!a || a.kind !== 'bomb') return;
+    const key = Date.now();
+    setBombFlash({ from: a.from, level: a.level, key });
+    const t = setTimeout(() => setBombFlash((cur) => (cur?.key === key ? null : cur)), 2600);
+    return () => clearTimeout(t);
+  }, [view.announce]);
+
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;
 
   return (
-    <div className="game">
+    <div className={`game${bombFlash ? ' game--bomb' : ''}`}>
+      {bombFlash && (
+        <div className="bomb-flash" key={bombFlash.key} aria-hidden="true">
+          <span className="bomb-flash__text">💥 폭탄!</span>
+        </div>
+      )}
       {dogFlash && (
         <div className="dog-toast" key={dogFlash.key}>
           🐕 <strong>{nameOf(dogFlash.from)}</strong> 님이 개를 내고{' '}
           <strong>{nameOf(dogFlash.to)}</strong> 님에게 리드를 넘겼어요
+        </div>
+      )}
+      {bombFlash && (
+        <div className="bomb-toast" key={`toast-${bombFlash.key}`}>
+          💥 <strong>{nameOf(bombFlash.from)}</strong> 님이{' '}
+          {bombFlash.level === 2 ? '스트레이트 폭탄' : '폭탄'}을 터뜨렸어요!
         </div>
       )}
       <MatchBar view={view} />
@@ -108,7 +133,9 @@ export function GameView({ view, room, onLeave }: Props) {
 
       {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
       {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
-      {view.phase === 'playing' && <Playing view={view} nameOf={nameOf} dogFlash={dogFlash} />}
+      {view.phase === 'playing' && (
+        <Playing view={view} nameOf={nameOf} dogFlash={dogFlash} bombFlash={bombFlash} />
+      )}
       {view.phase === 'scoring' && <Scoring view={view} isHost={isHost} nameOf={nameOf} />}
       {view.phase === 'finished' && <Finished view={view} isHost={isHost} onLeave={onLeave} />}
 
@@ -559,10 +586,12 @@ function Playing({
   view,
   nameOf,
   dogFlash,
+  bombFlash,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   dogFlash: { from: Seat; to: Seat; key: number } | null;
+  bombFlash: { from: Seat; level: number; key: number } | null;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
@@ -644,7 +673,7 @@ function Playing({
         </span>
       </div>
 
-      <TrickArea view={view} nameOf={nameOf} dogFlash={dogFlash} />
+      <TrickArea view={view} nameOf={nameOf} dogFlash={dogFlash} bombFlash={bombFlash} />
 
       {view.wish !== null && (
         <p className="hint">
@@ -720,10 +749,12 @@ function TrickArea({
   view,
   nameOf,
   dogFlash,
+  bombFlash,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   dogFlash: { from: Seat; to: Seat; key: number } | null;
+  bombFlash: { from: Seat; level: number; key: number } | null;
 }) {
   // The Dog clears the table and passes the lead — show the handoff while we wait
   // for the partner to lead (i.e. until a real card lands on the empty table).
@@ -742,16 +773,26 @@ function TrickArea({
   }
   return (
     <div className="trick">
-      {view.trick.map((play, i) => (
-        <div key={i} className={`trick__play${play.seat === view.trickOwner ? ' is-top' : ''}`}>
-          <span className="trick__who">{nameOf(play.seat)}</span>
-          <div className="trick__cards">
-            {play.cards.map((card) => (
-              <CardChip key={card.id} card={card} />
-            ))}
+      {view.trick.map((play, i) => {
+        const isBombPlay =
+          bombFlash?.from === play.seat &&
+          (play.type === 'bomb' || play.type === 'straightbomb');
+        return (
+          <div
+            key={i}
+            className={`trick__play${play.seat === view.trickOwner ? ' is-top' : ''}${
+              isBombPlay ? ' trick__play--bomb' : ''
+            }`}
+          >
+            <span className="trick__who">{nameOf(play.seat)}</span>
+            <div className="trick__cards">
+              {play.cards.map((card) => (
+                <CardChip key={card.id} card={card} />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

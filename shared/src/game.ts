@@ -81,17 +81,15 @@ export interface MatchInfo {
 }
 
 /**
- * A one-shot notable event for clients to animate. Some moves (the Dog) resolve
- * instantly and leave no trace in the trick, so the server flags them here for a
- * transient visual. It is set on the move that triggers it and cleared by the
- * next move, so it rides exactly one emitted snapshot — clients fire their effect
- * whenever a non-null announce arrives.
+ * A one-shot notable event for clients to animate. Some plays warrant a transient
+ * visual: the Dog (resolves instantly, leaves no card on the table) and a bomb
+ * (a dramatic, often out-of-turn, interrupt). The server flags it on the move
+ * that triggers it and clears it on the next move, so it rides exactly one emitted
+ * snapshot — clients fire their effect whenever a non-null announce arrives.
  */
-export interface GameAnnounce {
-  kind: 'dog';
-  from: Seat; // who played the special card
-  to: Seat; // who received the lead
-}
+export type GameAnnounce =
+  | { kind: 'dog'; from: Seat; to: Seat } // who played the Dog → who got the lead
+  | { kind: 'bomb'; from: Seat; level: number }; // who bombed + bombLevel (1=4종, 2=스트레이트)
 
 export interface GameState {
   phase: GamePhase;
@@ -274,6 +272,12 @@ export function playCards(
   state.trick.plays.push({ seat, combo });
   state.trick.top = combo;
   state.trick.owner = seat;
+
+  // A bomb is a dramatic (often out-of-turn) interrupt — flag it for a one-shot
+  // client visual that names the bomber and the bomb level.
+  if (combo.bombLevel > 0) {
+    state.announce = { kind: 'bomb', from: seat, level: combo.bombLevel };
+  }
 
   // A wish is fulfilled as soon as a card of the wished rank is played.
   if (state.wish !== null && cards.some((c) => concreteRank(c) === state.wish)) {
