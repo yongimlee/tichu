@@ -618,6 +618,34 @@ function Playing({
   // Collapse the expanded list again whenever the decision changes (new turn / hand).
   useEffect(() => setShowAllSuggest(false), [view.hand, topCombo]);
 
+  // "Stuck": your turn, following a trick, with no legal play at all (suggestions
+  // exclude the Phoenix-as-single, so check that separately). The pass is forced,
+  // so we auto-pass after a short, visible countdown.
+  const stuck =
+    myTurn &&
+    !isLeading &&
+    view.pendingDragon === null &&
+    suggestions.length === 0 &&
+    !phoenixSingleCanBeat(view.hand, topCombo);
+
+  const [autoPassLeft, setAutoPassLeft] = useState(0);
+  useEffect(() => {
+    if (!stuck) {
+      setAutoPassLeft(0);
+      return;
+    }
+    setAutoPassLeft(Math.ceil(AUTO_PASS_MS / 1000));
+    const tick = setInterval(() => setAutoPassLeft((s) => (s > 1 ? s - 1 : s)), 1000);
+    const pass = setTimeout(() => {
+      // The #demo page has no live game; show the countdown but don't actually emit.
+      if (window.location.hash !== '#demo') socket.emit('game:pass');
+    }, AUTO_PASS_MS);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(pass);
+    };
+  }, [stuck]);
+
   // While a single is on the table you can only beat it with a higher single or
   // a bomb. So restrict to one card at a time — unless the hand actually holds a
   // bomb (four of a kind / straight flush), in which case allow free multi-select
@@ -744,7 +772,15 @@ function Playing({
             </div>
           </div>
         ) : (
-          !isLeading && <p className="hint">🚫 낼 수 있는 조합이 없습니다 — 패스하세요.</p>
+          !isLeading &&
+          (stuck ? (
+            <p className="hint hint--autopass">
+              🚫 낼 수 있는 카드가 없습니다 — {autoPassLeft || Math.ceil(AUTO_PASS_MS / 1000)}초 후
+              자동으로 패스합니다.
+            </p>
+          ) : (
+            <p className="hint">🚫 낼 수 있는 조합이 없습니다 — 패스하세요.</p>
+          ))
         ))}
 
       <div className="actions actions--row">
@@ -852,6 +888,18 @@ function isPhoenixSingle(cards: Card[]): boolean {
   return cards.length === 1 && cards[0].kind === 'special' && cards[0].name === 'phoenix';
 }
 
+/**
+ * The one legal play `legalMoves` deliberately omits: spending the Phoenix as a
+ * plain single. It only beats a single top (and never the Dragon), so check that
+ * case so auto-pass never fires while the player still has a real option.
+ */
+function phoenixSingleCanBeat(hand: Card[], top: Combination | null): boolean {
+  if (!top || top.type !== 'single') return false;
+  const topCard = top.cards[0];
+  if (topCard.kind === 'special' && topCard.name === 'dragon') return false; // only a bomb beats 용
+  return hand.some((c) => c.kind === 'special' && c.name === 'phoenix');
+}
+
 function isDogSingle(cards: Card[]): boolean {
   return cards.length === 1 && cards[0].kind === 'special' && cards[0].name === 'dog';
 }
@@ -904,6 +952,10 @@ const TYPE_ORDER: Record<CombinationType, number> = {
 
 // How many suggestion chips to show before collapsing the rest behind "더보기".
 const SUGGEST_LIMIT = 8;
+
+// When you're following a trick with no legal play at all, the pass is forced —
+// auto-pass after this delay so a stuck turn doesn't make you click every time.
+const AUTO_PASS_MS = 2500;
 
 function comboLabel(c: Combination): string {
   const base = TYPE_LABEL[c.type];

@@ -375,6 +375,17 @@ input:focus {
   margin: 0.25rem 0;
 }
 
+/* Imminent auto-pass (stuck turn): brighter + a soft pulse so it's clearly active. */
+.hint--autopass {
+  color: var(--text);
+  font-weight: 600;
+  animation: autopass-pulse 1s ease-in-out infinite;
+}
+@keyframes autopass-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
 /* Toast */
 .toast {
   padding: 0.7rem 1rem;
