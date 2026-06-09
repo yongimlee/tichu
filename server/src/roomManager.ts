@@ -114,6 +114,9 @@ export class RoomManager {
     }
     entry.player.id = socketId;
     entry.player.connected = true;
+    // The host's socket id changes on reconnect; keep hostId pointing at them, or
+    // host-only actions (next hand, restart, team setup) would reject the real host.
+    if (entry.player.isHost) room.hostId = socketId;
     this.playerRooms.set(socketId, room.code);
     this.cancelCleanup(room.code); // someone is back — call off any pending purge
     return { room, player: entry.player };
