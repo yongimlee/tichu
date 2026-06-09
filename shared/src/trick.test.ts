@@ -210,3 +210,27 @@ test('a wish does not bind a player who lacks the rank entirely', () => {
   playCards(s, 0, ['jade-5']);
   pass(s, 1); // seat 1 has no 8 at all
 });
+
+test('a wish does not bind when only a bomb could fulfil it', () => {
+  // seat 1's only Ace-bearing legal play over the led straight is the four-Ace
+  // bomb — and you are never forced to play a bomb to fulfil a wish.
+  const aces = [c(14, 'jade'), c(14, 'star'), c(14, 'sword'), c(14, 'pagoda')];
+  const s = playing(
+    [[c(3), c(4), c(5), c(6), c(7), c(2)], [...aces, c(9, 'star')], [c(3, 'star')], [c(4, 'star')]],
+    0,
+  );
+  s.wish = 14; // wished for Aces
+  playCards(s, 0, ['jade-3', 'jade-4', 'jade-5', 'jade-6', 'jade-7']); // lead a 5-straight
+  assert.doesNotThrow(() => pass(s, 1)); // the bomb does not bind → may pass
+  assert.equal(s.wish, 14, 'the wish stays outstanding');
+});
+
+test('a player may still voluntarily bomb to fulfil a wish', () => {
+  const aces = [c(14, 'jade'), c(14, 'star'), c(14, 'sword'), c(14, 'pagoda')];
+  const s = playing([[c(5), c(2)], [...aces], [c(3, 'star')], [c(4, 'star')]], 0);
+  s.wish = 14;
+  playCards(s, 0, ['jade-5']);
+  // Not forced, but the bomb is a legal play and still fulfils (clears) the wish.
+  playCards(s, 1, ['jade-14', 'star-14', 'sword-14', 'pagoda-14']);
+  assert.equal(s.wish, null, 'voluntarily playing the Ace bomb clears the wish');
+});

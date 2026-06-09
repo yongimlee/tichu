@@ -102,6 +102,7 @@ function fulfillingMoves(hand: Card[], top: Combination | null, wish: number): C
     if (!hasWish) continue;
     const combo = detectCombination(subset);
     if (!combo || !canBeat(combo, top)) continue;
+    if (combo.bombLevel > 0) continue; // bombs never bind a wish (mirrors canFulfillWish)
     if (isPhoenixSingle(combo)) continue;
     const key = `${combo.type}:${combo.rank}:${combo.length}`;
     if (seen.has(key)) continue;

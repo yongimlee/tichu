@@ -646,7 +646,9 @@ function canFulfillWish(state: GameState, seat: Seat): boolean {
     const subset: Card[] = [];
     for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(hand[i]);
     const combo = detectCombination(subset);
-    if (combo && canBeat(combo, top)) return true;
+    // A bomb never binds: you are not forced to play (or break up) a bomb just to
+    // fulfil a wish, so bomb combinations don't count as a fulfilling move.
+    if (combo && combo.bombLevel === 0 && canBeat(combo, top)) return true;
   }
   return false;
 }
