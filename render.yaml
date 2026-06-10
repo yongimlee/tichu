@@ -16,6 +16,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: '20'
+      # Expert (용용봇/PIMC) bot tuning. Keep WORKERS at 1 on a shared-CPU plan;
+      # lower BUDGET_MS for faster (but weaker) expert moves. See server/src/pimc.ts.
+      - key: PIMC_WORKERS
+        value: '1'
+      - key: PIMC_BUDGET_MS
+        value: '500'
       # Optional: Discord/Slack webhook for the head-pat feed. Value is set in the
       # Render dashboard (sync: false → kept out of git, survives blueprint syncs).
       - key: DISCORD_WEBHOOK_URL
