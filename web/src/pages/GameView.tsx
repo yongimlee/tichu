@@ -640,6 +640,14 @@ function Playing({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
   const [showAllSuggest, setShowAllSuggest] = useState(false); // expand the trimmed suggestion list
+  // Whether to surface the "추천 조합" helper chips. Persisted so the preference
+  // survives reloads. The forced-pass safety below ignores this — it always runs.
+  const [suggestOn, setSuggestOn] = useState(
+    () => localStorage.getItem('tichu.suggest') !== 'off',
+  );
+  useEffect(() => {
+    localStorage.setItem('tichu.suggest', suggestOn ? 'on' : 'off');
+  }, [suggestOn]);
 
   const self = view.seats[view.selfSeat];
   const myTurn = view.turn === view.selfSeat && view.pendingDragon === null;
@@ -740,13 +748,25 @@ function Playing({
     <section className="card phase">
       <div className="phase__head">
         <h2>플레이</h2>
-        <span className={`turntag${myTurn ? ' turntag--mine' : ''}`}>
-          {view.pendingDragon !== null
-            ? `🐉 ${nameOf(view.pendingDragon)}(이)가 용 카드를 넘기는 중`
-            : myTurn
-              ? '내 차례'
-              : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
-        </span>
+        <div className="phase__head-right">
+          <button
+            type="button"
+            className={`btn btn--small suggest-toggle${suggestOn ? ' suggest-toggle--on' : ''}`}
+            role="switch"
+            aria-checked={suggestOn}
+            onClick={() => setSuggestOn((v) => !v)}
+            title="추천 조합 표시 켜기/끄기"
+          >
+            💡 추천 <span className="suggest-toggle__state">{suggestOn ? 'ON' : 'OFF'}</span>
+          </button>
+          <span className={`turntag${myTurn ? ' turntag--mine' : ''}`}>
+            {view.pendingDragon !== null
+              ? `🐉 ${nameOf(view.pendingDragon)}(이)가 용 카드를 넘기는 중`
+              : myTurn
+                ? '내 차례'
+                : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
+          </span>
+        </div>
       </div>
 
       <TrickArea view={view} nameOf={nameOf} dogFlash={dogFlash} bombFlash={bombFlash} />
@@ -780,50 +800,50 @@ function Playing({
         </div>
       )}
 
-      {myTurn &&
-        (suggestions.length > 0 ? (
-          <div className="suggest">
-            <span className="suggest__label">추천 조합 — 누르면 자동 선택됩니다</span>
-            <div className="suggest__chips">
-              {(showAllSuggest ? suggestions : suggestions.slice(0, SUGGEST_LIMIT)).map((c, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="btn btn--small suggest__chip"
-                  onClick={() => setSelected(new Set(c.cards.map((card) => card.id)))}
-                >
-                  {comboLabel(c)}
-                </button>
-              ))}
-              {suggestions.length > SUGGEST_LIMIT && (
-                <button
-                  type="button"
-                  className="suggest__toggle"
-                  aria-expanded={showAllSuggest}
-                  onClick={() => setShowAllSuggest((v) => !v)}
-                >
-                  {showAllSuggest ? (
-                    <>접기 <span className="suggest__chevron">▴</span></>
-                  ) : (
-                    <>외 {suggestions.length - SUGGEST_LIMIT}개 더보기{' '}
-                      <span className="suggest__chevron">▾</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
+      {myTurn && suggestOn && suggestions.length > 0 && (
+        <div className="suggest">
+          <span className="suggest__label">추천 조합 — 누르면 자동 선택됩니다</span>
+          <div className="suggest__chips">
+            {(showAllSuggest ? suggestions : suggestions.slice(0, SUGGEST_LIMIT)).map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                className="btn btn--small suggest__chip"
+                onClick={() => setSelected(new Set(c.cards.map((card) => card.id)))}
+              >
+                {comboLabel(c)}
+              </button>
+            ))}
+            {suggestions.length > SUGGEST_LIMIT && (
+              <button
+                type="button"
+                className="suggest__toggle"
+                aria-expanded={showAllSuggest}
+                onClick={() => setShowAllSuggest((v) => !v)}
+              >
+                {showAllSuggest ? (
+                  <>접기 <span className="suggest__chevron">▴</span></>
+                ) : (
+                  <>외 {suggestions.length - SUGGEST_LIMIT}개 더보기{' '}
+                    <span className="suggest__chevron">▾</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {myTurn && suggestions.length === 0 && !isLeading && (
+        stuck ? (
+          <p className="hint hint--autopass">
+            🚫 낼 수 있는 카드가 없습니다 — {autoPassLeft || Math.ceil(AUTO_PASS_MS / 1000)}초 후
+            자동으로 패스합니다.
+          </p>
         ) : (
-          !isLeading &&
-          (stuck ? (
-            <p className="hint hint--autopass">
-              🚫 낼 수 있는 카드가 없습니다 — {autoPassLeft || Math.ceil(AUTO_PASS_MS / 1000)}초 후
-              자동으로 패스합니다.
-            </p>
-          ) : (
-            <p className="hint">🚫 낼 수 있는 조합이 없습니다 — 패스하세요.</p>
-          ))
-        ))}
+          <p className="hint">🚫 낼 수 있는 조합이 없습니다 — 패스하세요.</p>
+        )
+      )}
 
       <div className="actions actions--row">
         {!self.hasPlayed && !self.grandTichu && !self.tichu && (

@@ -1284,6 +1284,42 @@ input:focus {
   color: var(--primary-ink);
 }
 
+/* Right cluster of the play header: the 추천 toggle + the turn pill. */
+.phase__head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.suggest-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  opacity: 0.6;
+  /* Match the turn pill (.turntag) so the two header chips read as one size. */
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  /* Left-align so toggling ON/OFF doesn't shift the label or the button edge. */
+  text-align: left;
+}
+
+/* Reserve room for the wider "OFF" so the button width is stable across states. */
+.suggest-toggle__state {
+  display: inline-block;
+  min-width: 2.2em;
+  text-align: left;
+}
+
+.suggest-toggle--on {
+  opacity: 1;
+  background: var(--primary);
+  color: var(--primary-ink);
+  border-color: var(--primary);
+}
+
 .phase__inset {
   background: var(--surface-2);
   margin: 0.5rem 0;
