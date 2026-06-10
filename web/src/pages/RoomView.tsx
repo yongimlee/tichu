@@ -1,4 +1,12 @@
-import type { Room, Seat } from '@tichu/shared';
+import {
+  BOT_DIFFICULTIES,
+  BOT_DIFFICULTY_EMOJI,
+  BOT_DIFFICULTY_LABELS,
+  BOT_DIFFICULTY_NAMES,
+  DEFAULT_BOT_DIFFICULTY,
+  type Room,
+  type Seat,
+} from '@tichu/shared';
 import { socket } from '../socket';
 import { RulesGuide } from '../components/RulesGuide';
 
@@ -61,7 +69,11 @@ export function RoomView({ room, selfId, onLeave }: Props) {
                     <>
                       <span className="seat__name">
                         {player.nickname}
-                        {player.isBot && <span className="badge">봇</span>}
+                        {player.isBot && (
+                          <span className="badge">
+                            {BOT_DIFFICULTY_LABELS[player.difficulty ?? DEFAULT_BOT_DIFFICULTY]}
+                          </span>
+                        )}
                         {player.isHost && <span className="badge">방장</span>}
                         {isSelf && <span className="badge badge--self">나</span>}
                       </span>
@@ -109,9 +121,22 @@ export function RoomView({ room, selfId, onLeave }: Props) {
 
       <section className="actions">
         {isHost && seatedCount < 4 && (
-          <button className="btn btn--secondary" onClick={() => socket.emit('room:addBot')}>
-            봇 추가
-          </button>
+          <div className="addbot">
+            <span className="addbot__title">봇 추가</span>
+            <div className="addbot__grid">
+              {BOT_DIFFICULTIES.map((d) => (
+                <button
+                  key={d}
+                  className="btn btn--secondary addbot__btn"
+                  onClick={() => socket.emit('room:addBot', { difficulty: d })}
+                >
+                  <span className="addbot__emoji">{BOT_DIFFICULTY_EMOJI[d]}</span>
+                  <span className="addbot__name">{BOT_DIFFICULTY_NAMES[d]}</span>
+                  <span className="addbot__tier">{BOT_DIFFICULTY_LABELS[d]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {!isManual && isHost && (
           <button className="btn btn--secondary" onClick={randomize}>

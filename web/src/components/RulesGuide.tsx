@@ -88,7 +88,7 @@ export function RulesGuide() {
       <h4>특수 카드</h4>
       <ul>
         <li>
-          🕊️ <strong>참새(1)</strong>: 가장 낮은 카드(보유자가 첫 리드). <strong>싱글</strong>로
+          🐦 <strong>참새(1)</strong>: 가장 낮은 카드(보유자가 첫 리드). <strong>싱글</strong>로
           내거나 <strong>스트레이트의 맨 아래 1</strong>로 쓸 수 있습니다(예: 1·2·3·4·5). 페어·
           트리플 등에는 못 들어갑니다.
           <span className="rules__sub">

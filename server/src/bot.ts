@@ -3,6 +3,7 @@ import {
   canBeat,
   cardPoints,
   declareGrandTichu,
+  DEFAULT_BOT_DIFFICULTY,
   detectCombination,
   giveDragon,
   nextSeat,
@@ -12,6 +13,7 @@ import {
   prevSeat,
   submitExchange,
   toPlayerView,
+  type BotDifficulty,
   type Card,
   type ClientToServerEvents,
   type Combination,
@@ -25,6 +27,7 @@ import {
 } from '@tichu/shared';
 import type { RoomManager } from './roomManager';
 import type { GameManager } from './gameManager';
+import type { PimcPool } from './pimcPool';
 
 // Server-controlled fill players. The driver watches each room and, whenever the
 // pending actor is a bot, performs a simple but legal action after a short delay
@@ -37,8 +40,14 @@ type TichuServer = Server<
   SocketData
 >;
 
+/** The result of a bot's decision: play these card ids, or pass; optionally wish. */
+export type BotMove = { play?: string[]; pass?: true; wish?: number };
+
 const SEATS: Seat[] = [0, 1, 2, 3];
 const BOT_DELAY_MS = 700;
+// The expert bot's own PIMC computation (~0.5s) already provides "thinking time",
+// so its pre-move pause is short — the search fills the rest before the move shows.
+const EXPERT_PREDELAY_MS = 150;
 // How long to wait before a bot covers a *disconnected human's* turn. Longer than a
 // bot's own delay so a quick reconnect (mobile backgrounding, network blip) takes
 // control back before the bot steps in, while a real drop doesn't stall the table.
@@ -60,7 +69,7 @@ function isPhoenixSingle(combo: Combination): boolean {
 }
 
 /** Legal plays from `hand` against `top` (null = leading), cheapest first. */
-function enumerateMoves(hand: Card[], top: Combination | null): Combination[] {
+export function enumerateMoves(hand: Card[], top: Combination | null): Combination[] {
   const n = hand.length;
   const out: Combination[] = [];
   const seen = new Set<string>();
@@ -86,7 +95,7 @@ function enumerateMoves(hand: Card[], top: Combination | null): Combination[] {
  * `enumerateMoves` dedups by shape and could otherwise hide the fulfilling
  * variant behind a same-shaped non-fulfilling one.
  */
-function fulfillingMoves(hand: Card[], top: Combination | null, wish: number): Combination[] {
+export function fulfillingMoves(hand: Card[], top: Combination | null, wish: number): Combination[] {
   const n = hand.length;
   const out: Combination[] = [];
   const seen = new Set<string>();
@@ -195,7 +204,7 @@ function chooseLead(moves: Combination[], bombs: Set<string>): Combination | nul
  * A Mahjong wish: pressure the table to spend a high card we don't hold, so we
  * never bind ourselves. Returns undefined when we hold every high rank.
  */
-function chooseWish(hand: Card[]): number | undefined {
+export function chooseWish(hand: Card[]): number | undefined {
   const have = new Set(hand.filter((c): c is SuitCard => c.kind === 'suit').map((c) => c.rank));
   for (let r = ACE_RANK; r >= 10; r--) if (!have.has(r)) return r;
   return undefined;
@@ -208,10 +217,7 @@ function chooseWish(hand: Card[]): number | undefined {
  * your own partner → don't break up a bomb → conserve the Dragon on cheap tricks →
  * otherwise the cheapest beating combo (or pass / bomb only when worth it).
  */
-export function botMove(
-  state: GameState,
-  seat: Seat,
-): { play?: string[]; pass?: true; wish?: number } {
+export function botMove(state: GameState, seat: Seat): BotMove {
   const hand = state.players[seat].hand;
   const top = state.trick.top;
   const leading = !top;
@@ -367,6 +373,87 @@ export function botMove(
   return { pass: true }; // not worth a bomb (or none) → hold
 }
 
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+/**
+ * The 짹짹봇 (easy): legal but careless. Leads a random combo, and when following
+ * either dawdles (passes) or plays a *random* beating move — so it wastes high
+ * cards, breaks its own bombs, even beats its partner. It still honours a Mahjong
+ * wish (that's a rule; skipping it would stall the table).
+ */
+function easyMove(state: GameState, seat: Seat): BotMove {
+  const hand = state.players[seat].hand;
+  const top = state.trick.top;
+  const leading = !top;
+  const dog = hand.find((c) => c.kind === 'special' && c.name === 'dog');
+
+  if (state.wish !== null) {
+    const fulfilling = fulfillingMoves(hand, top, state.wish);
+    if (fulfilling.length) return withWish(pickRandom(fulfilling), hand);
+  }
+
+  const moves = enumerateMoves(hand, top);
+  if (leading) {
+    if (!moves.length) return { play: [(dog ?? hand[0]).id] };
+    return withWish(pickRandom(moves), hand);
+  }
+  if (!moves.length) return { pass: true };
+  if (Math.random() < 0.3) return { pass: true }; // sometimes sits on a playable hand
+  return { play: pickRandom(moves).cards.map((c) => c.id) };
+}
+
+/**
+ * The 댕댕봇 (normal): efficient but plain. Goes out when it can, won't beat its
+ * partner, leads its longest combo (no finesse), and otherwise plays the cheapest
+ * beating move — no Dragon/bomb conservation, no Tichu cooperation/disruption, and
+ * it never spends a bomb. A clear step below the full heuristic (주작봇).
+ */
+function normalMove(state: GameState, seat: Seat): BotMove {
+  const hand = state.players[seat].hand;
+  const top = state.trick.top;
+  const leading = !top;
+  const partner = partnerSeat(seat);
+  const dog = hand.find((c) => c.kind === 'special' && c.name === 'dog');
+
+  let moves = enumerateMoves(hand, top);
+  let mustPlayForWish = false;
+  if (state.wish !== null) {
+    const fulfilling = fulfillingMoves(hand, top, state.wish);
+    if (fulfilling.length) {
+      moves = fulfilling;
+      mustPlayForWish = true;
+    }
+  }
+
+  const goOut = moves.filter((m) => m.cards.length === hand.length);
+  if (goOut.length) return withWish(goOut.find((m) => m.bombLevel === 0) ?? goOut[0], hand);
+
+  const nonBomb = moves.filter((m) => m.bombLevel === 0);
+
+  // Don't beat your partner if they're currently winning the trick.
+  if (!leading && state.trick.owner === partner && !mustPlayForWish) return { pass: true };
+
+  if (leading) {
+    const lead = [...nonBomb].sort((a, b) => b.length - a.length || a.rank - b.rank)[0] ?? moves[0];
+    if (lead) return withWish(lead, hand);
+    return { play: [(dog ?? hand[0]).id] };
+  }
+
+  const cheapest = nonBomb[0]; // moves are cheapest-first
+  if (cheapest) return { play: cheapest.cards.map((c) => c.id) };
+  if (mustPlayForWish && moves[0]) return { play: moves[0].cards.map((c) => c.id) };
+  return { pass: true }; // only bombs left → hold (댕댕봇 never spends a bomb)
+}
+
+/** The move policy for a heuristic tier. (Expert/PIMC is handled by the driver.) */
+function moveFor(difficulty: BotDifficulty): (state: GameState, seat: Seat) => BotMove {
+  if (difficulty === 'easy') return easyMove;
+  if (difficulty === 'normal') return normalMove;
+  return botMove; // 'hard' — and a safe fallback should 'expert' ever reach here
+}
+
 /** Attach a Mahjong wish to the play when the chosen combo leads the Mahjong. */
 function withWish(pick: Combination, hand: Card[]): { play: string[]; wish?: number } {
   const play = pick.cards.map((c) => c.id);
@@ -378,7 +465,7 @@ function withWish(pick: Combination, hand: Card[]): { play: string[]; wish?: num
 }
 
 /** Give the Dragon-won trick to the opponent who is furthest from going out. */
-function chooseDragonTarget(state: GameState, seat: Seat): Seat {
+export function chooseDragonTarget(state: GameState, seat: Seat): Seat {
   const left = nextSeat(seat);
   const right = prevSeat(seat); // both are opponents (partner sits opposite)
   return state.players[left].hand.length >= state.players[right].hand.length ? left : right;
@@ -443,7 +530,11 @@ export function pendingBotAction(room: Room, state: GameState): BotAction | null
   return null;
 }
 
-export function applyBotAction(action: BotAction, state: GameState): void {
+export function applyBotAction(
+  action: BotAction,
+  state: GameState,
+  difficulty: BotDifficulty = 'hard',
+): void {
   switch (action.type) {
     case 'grand':
       declareGrandTichu(state, action.seat, false); // bots never gamble the stake
@@ -455,7 +546,7 @@ export function applyBotAction(action: BotAction, state: GameState): void {
       giveDragon(state, action.seat, chooseDragonTarget(state, action.seat));
       break;
     case 'move': {
-      const m = botMove(state, action.seat);
+      const m = moveFor(difficulty)(state, action.seat);
       if (m.pass) pass(state, action.seat);
       else playCards(state, action.seat, m.play ?? [], m.wish !== undefined ? { wish: m.wish } : {});
       break;
@@ -465,11 +556,16 @@ export function applyBotAction(action: BotAction, state: GameState): void {
 
 export class BotDriver {
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  // Rooms with a step currently in flight. An expert move is async (it awaits a
+  // worker thread), so this guards against a second step starting on the same
+  // room — e.g. a human's out-of-turn bomb kicking the driver mid-think.
+  private busy = new Set<string>();
 
   constructor(
     private readonly io: TichuServer,
     private readonly rooms: RoomManager,
     private readonly games: GameManager,
+    private readonly pool?: PimcPool,
   ) {}
 
   /**
@@ -477,7 +573,7 @@ export class BotDriver {
    * bot — is up next (debounced per room).
    */
   kick(code: string): void {
-    if (this.timers.has(code)) return;
+    if (this.timers.has(code) || this.busy.has(code)) return;
     const room = this.rooms.getRoom(code);
     const state = this.games.getState(code);
     if (!room || !state) return;
@@ -487,45 +583,109 @@ export class BotDriver {
     // room sit. It resumes on reconnect, or the room manager purges it.
     if (!room.players.some((p) => !p.isBot && p.connected)) return;
     // A real bot moves quickly; covering for an offline human waits longer so a
-    // quick reconnect can take the turn back first.
+    // quick reconnect can take the turn back first. The expert bot pauses only
+    // briefly since its search itself takes time.
     const acting = room.players.find((p) => p.seat === action.seat);
-    const delay = acting && !acting.isBot ? OFFLINE_TAKEOVER_MS : BOT_DELAY_MS;
+    const offline = !!acting && !acting.isBot;
+    const expert =
+      action.type === 'move' && !offline && this.difficultyOf(room, action.seat) === 'expert';
+    const delay = offline ? OFFLINE_TAKEOVER_MS : expert ? EXPERT_PREDELAY_MS : BOT_DELAY_MS;
     const timer = setTimeout(() => {
       this.timers.delete(code);
-      this.step(code);
+      void this.step(code);
     }, delay);
     timer.unref?.();
     this.timers.set(code, timer);
   }
 
-  private step(code: string): void {
-    // This runs from a setTimeout, so any throw here is an *uncaught* exception
-    // that would crash the whole (single-instance, in-memory) server and wipe
-    // every room. Wrap the entire body — including settle/emit/kick — so a bad
-    // bot turn can, at worst, stall one room rather than end everyone's game.
+  /** The tier a seat plays at; an offline human's stand-in uses the full heuristic. */
+  private difficultyOf(room: Room, seat: Seat): BotDifficulty {
+    const p = room.players.find((pl) => pl.seat === seat);
+    if (!p || !p.isBot) return 'hard'; // cover a dropped human competently (and fast/sync)
+    return p.difficulty ?? DEFAULT_BOT_DIFFICULTY;
+  }
+
+  private async step(code: string): Promise<void> {
+    // Runs from a setTimeout: a throw here would be an *uncaught* exception that
+    // crashes the single-instance server and wipes every room. Wrap the whole
+    // body so a bad bot turn can, at worst, stall one room. `busy` serialises
+    // steps per room across the async expert path.
+    if (this.busy.has(code)) return;
+    this.busy.add(code);
     try {
       const room = this.rooms.getRoom(code);
       const state = this.games.getState(code);
       if (!room || !state) return;
       const action = pendingBotAction(room, state);
       if (!action) return;
-      try {
-        applyBotAction(action, state);
-      } catch {
-        // Shouldn't happen, but never loop forever: fall back to a pass if we can.
+
+      if (action.type === 'move' && this.pool && this.difficultyOf(room, action.seat) === 'expert') {
+        await this.expertMove(code, action.seat);
+      } else {
         try {
-          if (action.type === 'move' && state.trick.top) pass(state, action.seat);
-          else return;
+          applyBotAction(action, state, this.difficultyOf(room, action.seat));
         } catch {
-          return;
+          // Shouldn't happen, but never loop forever: fall back to a pass if we can.
+          try {
+            if (action.type === 'move' && state.trick.top) pass(state, action.seat);
+            else return;
+          } catch {
+            return;
+          }
         }
+        this.games.settle(code);
+        this.emitState(room);
       }
-      this.games.settle(code);
-      this.emitState(room);
-      this.kick(code); // chain to the next bot action, if any
     } catch (err) {
       console.error(`[bot.step] error in room ${code}:`, err);
+    } finally {
+      this.busy.delete(code);
     }
+    this.kick(code); // chain to the next bot action, if any (now that we're free)
+  }
+
+  /**
+   * Expert (PIMC) move: hand a state snapshot to a worker thread and await the
+   * chosen move, keeping the event loop free. The world may change while we
+   * think (a human can bomb out of turn), so we re-validate against the live
+   * state and fall back to a fresh heuristic move (then a pass) if the PIMC
+   * choice is stale or illegal.
+   */
+  private async expertMove(code: string, seat: Seat): Promise<void> {
+    const snapshot = this.games.getState(code);
+    if (!snapshot || !this.pool) return;
+    let move: BotMove | undefined;
+    try {
+      move = await this.pool.choose(snapshot, seat); // postMessage clones the snapshot
+    } catch (err) {
+      console.error(`[bot.expert] worker error in room ${code}:`, err);
+    }
+
+    const room = this.rooms.getRoom(code);
+    const state = this.games.getState(code);
+    if (!room || !state) return;
+    const live = pendingBotAction(room, state);
+    if (!live || live.type !== 'move' || live.seat !== seat) return; // no longer our move
+
+    const apply = (m: BotMove) => {
+      if (m.pass) pass(state, seat);
+      else playCards(state, seat, m.play ?? [], m.wish !== undefined ? { wish: m.wish } : {});
+    };
+    try {
+      apply(move ?? botMove(state, seat));
+    } catch {
+      try {
+        apply(botMove(state, seat)); // PIMC move was stale vs the changed state
+      } catch {
+        try {
+          if (state.trick.top) pass(state, seat);
+        } catch {
+          /* give up this tick; the chained kick will try again */
+        }
+      }
+    }
+    this.games.settle(code);
+    this.emitState(room);
   }
 
   private emitState(room: Room): void {

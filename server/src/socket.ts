@@ -1,13 +1,16 @@
 import type { Server, Socket } from 'socket.io';
 import {
+  BOT_DIFFICULTIES,
   declareGrandTichu,
   declareTichu,
+  DEFAULT_BOT_DIFFICULTY,
   EMOTES,
   giveDragon,
   pass,
   playCards,
   submitExchange,
   toPlayerView,
+  type BotDifficulty,
   type ClientToServerEvents,
   type Emote,
   type GameState,
@@ -146,12 +149,15 @@ export function registerSocketHandlers(
     }
   });
 
-  socket.on('room:addBot', () => {
+  socket.on('room:addBot', (payload) => {
     try {
       const room = rooms.getRoomBySocket(socket.id);
       if (!room) throw new Error('참여 중인 방이 없습니다.');
       if (room.hostId !== socket.id) throw new Error('방장만 봇을 추가할 수 있습니다.');
-      rooms.addBot(socket.id);
+      const difficulty = BOT_DIFFICULTIES.includes(payload?.difficulty as BotDifficulty)
+        ? (payload!.difficulty as BotDifficulty)
+        : DEFAULT_BOT_DIFFICULTY;
+      rooms.addBot(socket.id, difficulty);
       emitRoom(room.code);
     } catch (err) {
       socket.emit('room:error', { message: errMessage(err) });

@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import {
   ALL_SEATS,
+  BOT_DIFFICULTY_NAMES,
+  DEFAULT_BOT_DIFFICULTY,
   MAX_PLAYERS,
   normalizeTarget,
   shuffle,
+  type BotDifficulty,
   type Player,
   type Room,
   type Seat,
@@ -137,20 +140,24 @@ export class RoomManager {
   }
 
   /** Host adds a fill bot, seating it in the lowest free seat (lobby only). */
-  addBot(socketId: string): Room {
+  addBot(socketId: string, difficulty: BotDifficulty = DEFAULT_BOT_DIFFICULTY): Room {
     const room = this.requireRoom(socketId);
     if (room.status !== 'lobby') throw new Error('게임 시작 전에만 봇을 추가할 수 있습니다.');
     if (room.players.length >= MAX_PLAYERS) throw new Error('방이 가득 찼습니다.');
     const seat = ALL_SEATS.find((s) => !room.players.some((p) => p.seat === s));
     if (seat === undefined) throw new Error('빈 자리가 없습니다.');
-    const n = room.players.filter((p) => p.isBot).length + 1;
+    // Name the bot after its tier's mascot (짹짹봇 등); suffix a number if there is
+    // already one of the same kind so two never share a name.
+    const baseName = BOT_DIFFICULTY_NAMES[difficulty];
+    const sameKind = room.players.filter((p) => p.isBot && p.difficulty === difficulty).length;
     room.players.push({
       id: `bot-${randomUUID()}`,
-      nickname: `봇 ${n}`,
+      nickname: sameKind === 0 ? baseName : `${baseName} ${sameKind + 1}`,
       seat,
       isHost: false,
       connected: true,
       isBot: true,
+      difficulty,
     });
     return room;
   }

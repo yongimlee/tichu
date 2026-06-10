@@ -1,5 +1,5 @@
 import type { ExchangeSelection, PlayerView } from './game';
-import type { Room, Seat, TeamSelectionMode } from './room';
+import type { BotDifficulty, Room, Seat, TeamSelectionMode } from './room';
 
 // Typed Socket.IO event contracts shared by server and clients.
 // Keeping these in one place means a change to a payload is a compile error on
@@ -48,8 +48,8 @@ export interface ClientToServerEvents {
   ) => void;
   'room:setSeat': (payload: { seat: Seat | null }) => void;
   'room:randomizeTeams': () => void;
-  /** Host: add a fill bot to an empty seat. */
-  'room:addBot': () => void;
+  /** Host: add a fill bot to an empty seat, optionally choosing its strength. */
+  'room:addBot': (payload?: { difficulty?: BotDifficulty }) => void;
   /** Host: remove a bot by its player id. */
   'room:removeBot': (payload: { playerId: string }) => void;
   'game:start': () => void;

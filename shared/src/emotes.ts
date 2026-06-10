@@ -11,7 +11,7 @@ export const EMOTES = [
   '🐶',
   '🐉',
   '🐦‍🔥',
-  '🕊️',
+  '🐦',
 ] as const;
 
 export type Emote = (typeof EMOTES)[number];

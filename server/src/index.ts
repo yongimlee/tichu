@@ -13,6 +13,7 @@ import type {
 } from '@tichu/shared';
 import { BotDriver } from './bot';
 import { GameManager } from './gameManager';
+import { PimcPool } from './pimcPool';
 import { RoomManager } from './roomManager';
 import { registerSocketHandlers } from './socket';
 
@@ -63,7 +64,12 @@ const io = new Server<
 const games = new GameManager();
 // Purge a room's game when the room itself is cleaned up (all players offline).
 const rooms = new RoomManager((code) => games.end(code));
-const bots = new BotDriver(io, rooms, games);
+// Worker pool for the expert (PIMC) bot, so its heavy search runs off the event
+// loop. Size/budget are tunable via env for the deploy host's CPU.
+const pimcPool = new PimcPool(Number(process.env.PIMC_WORKERS ?? 1), {
+  budgetMs: Number(process.env.PIMC_BUDGET_MS ?? 500),
+});
+const bots = new BotDriver(io, rooms, games, pimcPool);
 
 io.on('connection', (socket) => {
   registerSocketHandlers(io, socket, rooms, games, bots);
