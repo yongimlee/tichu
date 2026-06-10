@@ -558,24 +558,48 @@ function GrandTichu({ view, decided }: { view: PlayerView; decided: boolean }) {
 
 type SlotKey = 'toLeft' | 'toPartner' | 'toRight';
 
+// Old card-exchange UI used three dropdowns (one per target). Kept here, disabled,
+// so we can fall back to it; the active UI is the tap-to-assign panel below.
+const USE_EXCHANGE_DROPDOWN = false;
+
 function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => string }) {
   const [picks, setPicks] = useState<Record<SlotKey, string>>({
     toLeft: '',
     toPartner: '',
     toRight: '',
   });
+  // Card currently picked up from the hand, awaiting a target panel tap.
+  const [staged, setStaged] = useState<string>('');
 
   const done = view.seats[view.selfSeat].hasExchanged;
   const grandDeclared = view.seats[view.selfSeat].grandTichu;
 
-  const slots: { key: SlotKey; label: string; seat: Seat }[] = [
-    { key: 'toLeft', label: '왼쪽 상대', seat: nextSeat(view.selfSeat) },
-    { key: 'toPartner', label: '파트너', seat: partnerSeat(view.selfSeat) },
-    { key: 'toRight', label: '오른쪽 상대', seat: prevSeat(view.selfSeat) },
+  const slots: { key: SlotKey; label: string; seat: Seat; side: 'ours' | 'theirs' }[] = [
+    { key: 'toLeft', label: '왼쪽', seat: nextSeat(view.selfSeat), side: 'theirs' },
+    { key: 'toPartner', label: '파트너', seat: partnerSeat(view.selfSeat), side: 'ours' },
+    { key: 'toRight', label: '오른쪽', seat: prevSeat(view.selfSeat), side: 'theirs' },
   ];
 
   const used = Object.values(picks).filter(Boolean);
   const ready = used.length === 3 && new Set(used).size === 3;
+
+  const cardById = (id: string) => view.hand.find((c) => c.id === id);
+
+  // Tap a hand card to pick it up / put it back down.
+  const toggleStaged = (card: Card) => {
+    if (used.includes(card.id)) return;
+    setStaged((s) => (s === card.id ? '' : card.id));
+  };
+
+  // Tap a target panel to drop the staged card there (replacing any existing one).
+  const assignTo = (key: SlotKey) => {
+    if (!staged) return;
+    setPicks((p) => ({ ...p, [key]: staged }));
+    setStaged('');
+  };
+
+  // Tap an already-assigned card to pull it back into the hand.
+  const recall = (key: SlotKey) => setPicks((p) => ({ ...p, [key]: '' }));
 
   const submit = () => socket.emit('game:exchange', picks);
 
@@ -592,30 +616,79 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
   return (
     <section className="card phase">
       <h2>카드 교환</h2>
-      <p className="hint">세 명에게 한 장씩 건넵니다.</p>
-      <div className="exchange">
-        {slots.map((slot) => (
-          <label key={slot.key} className="exchange__slot">
-            <span>
-              {slot.label} · <strong>{nameOf(slot.seat)}</strong>
-            </span>
-            <select
-              value={picks[slot.key]}
-              onChange={(e) => setPicks((p) => ({ ...p, [slot.key]: e.target.value }))}
-            >
-              <option value="">카드 선택</option>
-              {view.hand
-                .filter((c) => c.id === picks[slot.key] || !used.includes(c.id))
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {cardText(c)}
-                  </option>
-                ))}
-            </select>
-          </label>
-        ))}
-      </div>
-      <Hand cards={view.hand} selectedIds={new Set(used)} />
+      <p className="hint">
+        {used.length > 0
+          ? '건넨 카드를 다시 누르면 회수할 수 있어요.'
+          : '카드를 고른 뒤 건넬 상대를 누르세요.'}
+      </p>
+      {USE_EXCHANGE_DROPDOWN ? (
+        <div className="exchange">
+          {slots.map((slot) => (
+            <label key={slot.key} className="exchange__slot">
+              <span>
+                {slot.label} · <strong>{nameOf(slot.seat)}</strong>
+              </span>
+              <select
+                value={picks[slot.key]}
+                onChange={(e) => setPicks((p) => ({ ...p, [slot.key]: e.target.value }))}
+              >
+                <option value="">카드 선택</option>
+                {view.hand
+                  .filter((c) => c.id === picks[slot.key] || !used.includes(c.id))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {cardText(c)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div className="exchange-panels">
+          {slots.map((slot) => {
+            const assigned = picks[slot.key] ? cardById(picks[slot.key]) : undefined;
+            const isTarget = !!staged && !assigned;
+            return (
+              <div
+                key={slot.key}
+                className={`exchange-panel exchange-panel--${slot.side}${
+                  isTarget ? ' exchange-panel--target' : ''
+                }`}
+                role="button"
+                onClick={() => assignTo(slot.key)}
+              >
+                <span className={`exchange-panel__tag exchange-panel__tag--${slot.side}`}>
+                  {slot.side === 'ours' ? '우리 팀' : '상대'}
+                </span>
+                <span className="exchange-panel__label">
+                  {slot.label}
+                  <strong>{nameOf(slot.seat)}</strong>
+                </span>
+                <div className="exchange-panel__card">
+                  {assigned ? (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        recall(slot.key);
+                      }}
+                    >
+                      <CardChip card={assigned} />
+                    </span>
+                  ) : (
+                    <span className="exchange-panel__empty">카드 선택</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <Hand
+        cards={USE_EXCHANGE_DROPDOWN ? view.hand : view.hand.filter((c) => !used.includes(c.id))}
+        selectedIds={USE_EXCHANGE_DROPDOWN ? new Set(used) : staged ? new Set([staged]) : new Set()}
+        onToggle={USE_EXCHANGE_DROPDOWN ? undefined : toggleStaged}
+      />
       {!grandDeclared && (
         <p className="hint">전체 14장을 확인했으니 지금 티츄(100점)를 선언할 수 있습니다.</p>
       )}
