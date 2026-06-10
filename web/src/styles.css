@@ -1404,9 +1404,10 @@ input:focus {
   color: var(--accent);
   font-weight: 700;
 }
+/* scaleX(-1) mirrors the dog so it faces the receiver (shown to its right). */
 @keyframes dog-trot {
-  0%, 100% { transform: translateX(0) rotate(0); }
-  50% { transform: translateX(7px) rotate(5deg); }
+  0%, 100% { transform: translateX(0) rotate(0) scaleX(-1); }
+  50% { transform: translateX(7px) rotate(5deg) scaleX(-1); }
 }
 @keyframes dog-arrow {
   0%, 100% { opacity: 0.4; transform: translateX(0); }
