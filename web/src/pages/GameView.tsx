@@ -615,7 +615,9 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
 
   return (
     <section className="card phase">
-      <h2>카드 교환</h2>
+      <h2>
+        카드 교환 <small className="phase__subtitle">세 명에게 한 장씩 건넵니다</small>
+      </h2>
       <p className="hint">
         {used.length > 0
           ? '건넨 카드를 다시 누르면 회수할 수 있어요.'
