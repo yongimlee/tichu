@@ -18,7 +18,19 @@ import { RoomManager } from './roomManager';
 import { registerSocketHandlers } from './socket';
 
 const PORT = Number(process.env.PORT ?? 3001);
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
+// Allowed origins for CORS. The web client in single-deploy mode is same-origin
+// (no CORS needed), but the Capacitor mobile app loads from a local scheme and
+// connects to this server cross-origin, so those origins must be allowed for
+// both Express and Socket.IO. Override/extend with a comma-separated
+// CLIENT_ORIGIN env var.
+const DEFAULT_ORIGINS = [
+  'http://localhost:5173', // Vite dev server
+  'https://localhost', // Capacitor Android (androidScheme: 'https', the default)
+  'capacitor://localhost', // Capacitor iOS
+];
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(',').map((o) => o.trim())
+  : DEFAULT_ORIGINS;
 
 // Last-resort safety net. All game/room state lives in this single process's
 // memory, so a single uncaught throw on an async path (a bot timer, a socket

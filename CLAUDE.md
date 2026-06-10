@@ -21,6 +21,15 @@ npm run build          # build the web client into web/dist
 npm start              # run the server in production mode (serves web/dist if present)
 ```
 
+Mobile (Capacitor — Android), run from `web/`:
+
+```bash
+npm run build:mobile   # vite build --mode mobile → bakes web/.env.mobile (VITE_SERVER_URL)
+npm run cap:sync       # cap sync android — copy dist into the native project
+npm run mobile         # build:mobile + cap sync in one step
+npm run cap:android    # cap open android — open the project in Android Studio to build/run the APK
+```
+
 Tests (only `shared` has them — `node:test`):
 
 ```bash
@@ -68,6 +77,9 @@ Players get a reconnect token (server `tokens` map + client `localStorage` key `
 
 ### Client (`web/src/`)
 `App.tsx` holds top-level room/session state and renders pages (`Home`, `RoomView`, `GameView`). `web/src/socket.ts` is the singleton Socket.IO client (`SERVER_URL` is `:3001` in dev, same-origin in a production build, overridable via `VITE_SERVER_URL`). `pages/Demo.tsx` renders every phase/scenario with hand-built `PlayerView` literals for visual iteration without a running server — keep its literals in sync when you change shared view types.
+
+### Mobile app (Capacitor)
+The same React/Vite client is packaged as a native Android app with Capacitor (`web/capacitor.config.ts`, `appId: com.tichu.app`, `webDir: dist`; native project in `web/android/`). Unlike single-deploy web, the mobile app is **not** same-origin with the server — it loads from `https://localhost` (Capacitor's `androidScheme`) and must connect to the deployed server over the network. So the mobile build uses `--mode mobile`, which loads `web/.env.mobile` (`VITE_SERVER_URL=https://tichu-ghv0.onrender.com`) and bakes the absolute server URL into the bundle (`web/src/socket.ts` reads `VITE_SERVER_URL`). For this to work the server's CORS allowlist must include the Capacitor origins (`https://localhost`, `capacitor://localhost`) — see `DEFAULT_ORIGINS` in `server/src/index.ts` (override with a comma-separated `CLIENT_ORIGIN` env var). Building the APK needs Android Studio (JDK + Android SDK); after `npm run mobile`, open `web/android` in Android Studio.
 
 ### Single-deploy mode
 In production the server serves `web/dist` (Express static + SPA fallback) from the same origin, so the whole app is one service with no CORS. `render.yaml` is the Render blueprint (`npm run build` then `npm start`). State is in-memory → single instance only; a restart drops in-progress games.
