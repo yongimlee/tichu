@@ -566,6 +566,7 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
   });
 
   const done = view.seats[view.selfSeat].hasExchanged;
+  const grandDeclared = view.seats[view.selfSeat].grandTichu;
 
   const slots: { key: SlotKey; label: string; seat: Seat }[] = [
     { key: 'toLeft', label: '왼쪽 상대', seat: nextSeat(view.selfSeat) },
@@ -615,7 +616,9 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
         ))}
       </div>
       <Hand cards={view.hand} selectedIds={new Set(used)} />
-      <p className="hint">전체 14장을 확인했으니 지금 티츄(100점)를 선언할 수 있습니다.</p>
+      {!grandDeclared && (
+        <p className="hint">전체 14장을 확인했으니 지금 티츄(100점)를 선언할 수 있습니다.</p>
+      )}
       <div className="actions actions--row">
         <TichuDeclare view={view} />
         <button className="btn btn--primary" disabled={!ready} onClick={submit}>
@@ -937,8 +940,7 @@ function DragonGift({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => s
 /** Small-Tichu declaration — available from the exchange phase until your first card. */
 function TichuDeclare({ view }: { view: PlayerView }) {
   const self = view.seats[view.selfSeat];
-  if (self.grandTichu || self.hasPlayed) return null;
-  if (self.tichu) return <p className="hint">🔴 티츄 선언 완료 (100점)</p>;
+  if (self.grandTichu || self.hasPlayed || self.tichu) return null;
   return (
     <button className="btn btn--secondary" onClick={() => socket.emit('game:tichu')}>
       티츄 선언 (100점)
