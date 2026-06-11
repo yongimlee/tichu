@@ -279,7 +279,7 @@ input:focus {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  /* Fixed width sized for the longest label ("🔗 초대 링크 복사") so the buttons
+  /* Fixed width sized for the longest label ("🔗 링크 복사") so the buttons
      don't resize when the text swaps to "복사 완료". */
   flex: 0 0 auto;
   width: 12rem;
@@ -1801,6 +1801,15 @@ input:focus {
   /* Small screens: size hand cards so up to 7 fit per row (a 14-card hand → 2 rows). */
   .hand .card {
     width: calc((100% - 6 * 0.4rem) / 7);
+  }
+
+  /* Narrow the copy buttons so they don't push the code block off the card. */
+  .invite__actions {
+    width: 7rem;
+  }
+  .invite__actions .btn {
+    padding: 0.55rem 0.4rem;
+    font-size: 0.85rem;
   }
 }
 

@@ -61,7 +61,7 @@ export function RoomView({ room, selfId, onLeave }: Props) {
         </div>
         <div className="invite__actions">
           <button className="btn btn--ghost" onClick={() => copy(inviteUrl, 'link')}>
-            {copied === 'link' ? '복사 완료' : '🔗 초대 링크 복사'}
+            {copied === 'link' ? '복사 완료' : '🔗 링크 복사'}
           </button>
           <button className="btn btn--ghost" onClick={() => copy(room.code, 'code')}>
             {copied === 'code' ? '복사 완료' : '코드 복사'}
