@@ -1,4 +1,6 @@
 :root {
+  /* We render our own dark UI; tell the browser so it won't force-darken on top. */
+  color-scheme: dark;
   --bg: #0f1115;
   --surface: #1a1e27;
   --surface-2: #232936;
