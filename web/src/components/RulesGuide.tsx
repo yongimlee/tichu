@@ -106,6 +106,13 @@ export function RulesGuide() {
         <li>
           🐦‍🔥 <strong>봉황</strong>: 와일드카드(−25점). 싱글로 내면 직전 카드보다 0.5 높음(용은 못
           이김). 폭탄을 제외한 조합의 아무 카드나 대체합니다.
+          <span className="rules__sub">
+            +0.5는 <strong>싱글일 때만</strong>입니다.
+            <br />
+            페어·트리플 등 조합 안에 넣으면 짝꿍 카드와{' '}
+            <strong>똑같은 랭크</strong>가 됩니다(예: K+봉황 = K 페어 → K 페어는 못 이기고 Q 페어
+            이하만 받음).
+          </span>
         </li>
       </ul>
 
