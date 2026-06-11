@@ -11,6 +11,9 @@
   --primary-ink: #ffffff;
   --danger: #ff5d5d;
   --accent: #ffd166;
+  /* Team colours (match the in-game seat strip): A = teal, B = coral. */
+  --team-a: #38bd93;
+  --team-b: #e0794f;
   --radius: 12px;
 }
 
@@ -291,15 +294,34 @@ input:focus {
 }
 
 /* Teams */
+/* 팀 A·팀 B are one unified card split by a divider — no gap between them. */
 .teams {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.team {
+  padding: 1.25rem;
+}
+.team + .team {
+  border-left: 1px solid var(--border); /* vertical divider between the two teams */
 }
 
 .team__label {
   margin: 0 0 0.75rem;
   font-size: 1rem;
+}
+/* Colour the lobby labels to match the in-game team colours. */
+.team--a .team__label {
+  color: var(--team-a);
+}
+.team--b .team__label {
+  color: var(--team-b);
 }
 
 .seat {
@@ -348,9 +370,14 @@ input:focus {
 }
 
 /* Waiting list */
+/* Drop the heading's default top margin so it sits at the card's padding, not below it. */
+.waiting h3 {
+  margin: 0 0 0.5rem;
+}
+
 .waiting__list {
   list-style: none;
-  margin: 0.5rem 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
@@ -380,6 +407,8 @@ input:focus {
 .addbot__title {
   font-size: 0.8rem;
   color: var(--muted);
+  text-align: center;
+  margin: 0.5rem 0;
 }
 .addbot__grid {
   display: flex;
@@ -764,17 +793,17 @@ input:focus {
 
 /* Team colours — partners (opposite seats) share a colour. */
 .seatstrip__item--team-a {
-  border-top-color: #38bd93; /* teal */
+  border-top-color: var(--team-a); /* teal */
 }
 .seatstrip__item--team-b {
-  border-top-color: #e0794f; /* coral */
+  border-top-color: var(--team-b); /* coral */
 }
 .seatstrip__item--team-a .seatstrip__team {
-  color: #38bd93;
+  color: var(--team-a);
   font-weight: 700;
 }
 .seatstrip__item--team-b .seatstrip__team {
-  color: #e0794f;
+  color: var(--team-b);
   font-weight: 700;
 }
 
@@ -866,10 +895,10 @@ input:focus {
   padding: 0.5rem;
 }
 .scoreboard__player--team-a {
-  border-top-color: #38bd93;
+  border-top-color: var(--team-a);
 }
 .scoreboard__player--team-b {
-  border-top-color: #e0794f;
+  border-top-color: var(--team-b);
 }
 
 .scoreboard__head {
@@ -1653,13 +1682,13 @@ input:focus {
 
 /* Team distinction: partner = our team (teal), opponents = theirs (coral). */
 .exchange-panel--ours {
-  border-color: color-mix(in srgb, #38bd93 55%, var(--border));
-  background: color-mix(in srgb, #38bd93 10%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--team-a) 55%, var(--border));
+  background: color-mix(in srgb, var(--team-a) 10%, var(--surface-2));
 }
 
 .exchange-panel--theirs {
-  border-color: color-mix(in srgb, #e0794f 55%, var(--border));
-  background: color-mix(in srgb, #e0794f 10%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--team-b) 55%, var(--border));
+  background: color-mix(in srgb, var(--team-b) 10%, var(--surface-2));
 }
 
 .exchange-panel--target {
@@ -1676,13 +1705,13 @@ input:focus {
 }
 
 .exchange-panel__tag--ours {
-  color: #38bd93;
-  background: color-mix(in srgb, #38bd93 18%, transparent);
+  color: var(--team-a);
+  background: color-mix(in srgb, var(--team-a) 18%, transparent);
 }
 
 .exchange-panel__tag--theirs {
-  color: #e0794f;
-  background: color-mix(in srgb, #e0794f 18%, transparent);
+  color: var(--team-b);
+  background: color-mix(in srgb, var(--team-b) 18%, transparent);
 }
 
 .exchange-panel__label {
@@ -1715,6 +1744,11 @@ input:focus {
 @media (max-width: 480px) {
   .teams {
     grid-template-columns: 1fr;
+  }
+  /* Stacked: the divider runs horizontally between the two teams instead. */
+  .team + .team {
+    border-left: none;
+    border-top: 1px solid var(--border);
   }
 
   /* Small screens: size hand cards so up to 7 fit per row (a 14-card hand → 2 rows). */

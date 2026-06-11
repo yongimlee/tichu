@@ -55,7 +55,7 @@ export function RoomView({ room, selfId, onLeave }: Props) {
 
       <section className="teams">
         {TEAMS.map((team) => (
-          <div key={team.id} className="card team">
+          <div key={team.id} className={`team team--${team.id.toLowerCase()}`}>
             <h2 className="team__label">{team.label}</h2>
             {team.seats.map((seat) => {
               const player = occupant(seat);
@@ -122,7 +122,7 @@ export function RoomView({ room, selfId, onLeave }: Props) {
       <section className="actions">
         {isHost && seatedCount < 4 && (
           <div className="addbot">
-            <span className="addbot__title">봇 추가</span>
+            <span className="addbot__title">빈 자리에 봇을 추가할 수 있어요</span>
             <div className="addbot__grid">
               {BOT_DIFFICULTIES.map((d) => (
                 <button
