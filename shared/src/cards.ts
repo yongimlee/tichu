@@ -85,8 +85,12 @@ export function rankLabel(rank: number): string {
   return { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' }[rank] ?? String(rank);
 }
 
-/** Fisher–Yates shuffle returning a new array. `rng` is injectable for tests. */
-export function shuffle<T>(items: T[], rng: () => number = Math.random): T[] {
+/**
+ * Fisher–Yates shuffle returning a new array. `rng` is required so every caller
+ * makes an explicit choice of randomness source — card dealing must inject a
+ * CSPRNG (server's `cryptoRandom`); non-security shuffles may pass `Math.random`.
+ */
+export function shuffle<T>(items: T[], rng: () => number): T[] {
   const a = items.slice();
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));

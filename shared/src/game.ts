@@ -144,8 +144,12 @@ function stackSpecials(deck: Card[], seat: Seat): Card[] {
   return out;
 }
 
-/** Shuffle and deal the first 8 cards to each player; hold back the rest. */
-export function startHand(rng: () => number = Math.random, opts?: DealOptions): GameState {
+/**
+ * Shuffle and deal the first 8 cards to each player; hold back the rest.
+ * `rng` is required — the server must inject a CSPRNG (`cryptoRandom`) so a deal
+ * can't silently fall back to predictable `Math.random`. Tests pass a seeded rng.
+ */
+export function startHand(rng: () => number, opts?: DealOptions): GameState {
   let deck = shuffle(createDeck(), rng);
   if (opts?.stackSpecialsForSeat !== undefined) {
     deck = stackSpecials(deck, opts.stackSpecialsForSeat);

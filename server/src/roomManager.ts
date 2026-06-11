@@ -174,7 +174,9 @@ export class RoomManager {
   randomizeTeams(socketId: string): Room {
     const room = this.requireRoom(socketId);
     if (room.hostId !== socketId) throw new Error('방장만 팀을 배정할 수 있습니다.');
-    const seats = shuffle([...ALL_SEATS]);
+    // Team assignment is a host-triggered lobby action with no hidden info to
+    // protect, so plain Math.random is fine here (unlike card dealing).
+    const seats = shuffle([...ALL_SEATS], Math.random);
     room.players.forEach((p, i) => {
       p.seat = i < seats.length ? seats[i] : null;
     });
