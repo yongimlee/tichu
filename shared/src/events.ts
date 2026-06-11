@@ -34,7 +34,13 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   'room:create': (
-    payload: { nickname: string; teamSelectionMode: TeamSelectionMode; targetScore: number },
+    payload: {
+      nickname: string;
+      teamSelectionMode: TeamSelectionMode;
+      targetScore: number;
+      /** Solo tutorial room — rig the deal so the host (seat 0) holds every special card. */
+      tutorial?: boolean;
+    },
     ack: (res: Ack<JoinResult>) => void,
   ) => void;
   'room:join': (

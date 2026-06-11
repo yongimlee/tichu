@@ -303,7 +303,7 @@ const noop = () => {};
 function renderScenario(scenario: Scenario, gameView: PlayerView | null) {
   switch (scenario) {
     case 'home':
-      return <Home onJoined={noop} onError={noop} />;
+      return <Home onJoined={noop} onError={noop} onTutorial={noop} />;
     case 'lobby-manual':
       return <RoomView room={lobbyManual} selfId="p0" onLeave={noop} />;
     case 'lobby-random':

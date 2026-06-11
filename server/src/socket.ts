@@ -88,10 +88,16 @@ export function registerSocketHandlers(
     }
   };
 
-  socket.on('room:create', ({ nickname, teamSelectionMode, targetScore }, ack) => {
+  socket.on('room:create', ({ nickname, teamSelectionMode, targetScore, tutorial }, ack) => {
     try {
       const name = sanitizeNickname(nickname);
-      const { room, token } = rooms.createRoom(socket.id, name, teamSelectionMode, targetScore);
+      const { room, token } = rooms.createRoom(
+        socket.id,
+        name,
+        teamSelectionMode,
+        targetScore,
+        tutorial === true,
+      );
       socket.join(room.code);
       socket.data.roomCode = room.code;
       ack({ ok: true, data: { room, selfId: socket.id, token } });
@@ -180,7 +186,7 @@ export function registerSocketHandlers(
     try {
       const room = rooms.startGame(socket.id);
       emitRoom(room.code);
-      games.start(room.code, room.targetScore);
+      games.start(room.code, room.targetScore, room.tutorial === true);
       emitGameState(room);
       bots.kick(room.code);
     } catch (err) {

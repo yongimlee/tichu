@@ -1717,3 +1717,147 @@ input:focus {
     width: calc((100% - 6 * 0.4rem) / 7);
   }
 }
+
+/* ── Tutorial: Home call-to-action ─────────────────────────────────────── */
+.tutorial-cta {
+  margin-top: 1rem;
+}
+
+.tutorial-cta__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.6rem;
+}
+.tutorial-cta__divider::before,
+.tutorial-cta__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.btn--tutorial {
+  width: 100%;
+  background: linear-gradient(135deg, #ffd166, #ff9f45);
+  color: #2a1c05;
+  font-weight: 700;
+  border: none;
+}
+.btn--tutorial:hover {
+  filter: brightness(1.05);
+}
+
+.tutorial-cta__note {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ── Tutorial: in-game coach overlay ───────────────────────────────────── */
+.coach {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: min(560px, calc(100vw - 1.5rem));
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: coach-in 0.25s ease;
+}
+@keyframes coach-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.coach__avatar {
+  font-size: 1.9rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.coach__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.coach__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.coach__title {
+  color: var(--accent);
+  font-size: 0.98rem;
+}
+
+.coach__step {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.coach__text {
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.coach__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.coach__link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.coach__link:hover {
+  color: var(--text);
+}
+
+/* Collapsed state — a small pill to bring the coach back. */
+.coach-reopen {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.coach-reopen:hover {
+  filter: brightness(1.1);
+}

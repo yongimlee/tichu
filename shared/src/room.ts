@@ -98,4 +98,6 @@ export interface Room {
   targetScore: number; // points needed to win the match (100–1000)
   players: Player[];
   createdAt: number;
+  /** Solo tutorial room — the deal is rigged so the human (seat 0) holds every special card. */
+  tutorial?: boolean;
 }

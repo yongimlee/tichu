@@ -9,15 +9,21 @@ import {
 } from '@tichu/shared';
 import { socket } from '../socket';
 import { RulesGuide } from '../components/RulesGuide';
+import { resetTutorialProgress } from '../components/TutorialCoach';
 
 interface Props {
   onJoined: (room: Room, selfId: string, token: string) => void;
   onError: (message: string) => void;
+  /** Flag the session as a solo tutorial before its room is created. */
+  onTutorial: () => void;
 }
+
+// A short target so the guided walkthrough reaches the end-of-game screen quickly.
+const TUTORIAL_TARGET = 200;
 
 type Tab = 'create' | 'join';
 
-export function Home({ onJoined, onError }: Props) {
+export function Home({ onJoined, onError, onTutorial }: Props) {
   const [tab, setTab] = useState<Tab>('create');
   const [nickname, setNickname] = useState('');
   const [code, setCode] = useState('');
@@ -38,6 +44,29 @@ export function Home({ onJoined, onError }: Props) {
     if (!nickname.trim()) return onError('닉네임을 입력해주세요.');
     if (!code.trim()) return onError('초대 코드를 입력해주세요.');
     socket.emit('room:join', { code, nickname }, handleAck);
+  };
+
+  // One-tap solo tutorial: spin up a manual room, take seat 0, fill the other
+  // three seats with easiest (짹짹) bots, and start. The emits after create are
+  // fire-and-forget — Socket.IO preserves order per connection, so the server
+  // applies seat → 3×bot → start in sequence before dealing.
+  const startTutorial = () => {
+    const name = nickname.trim() || '나';
+    resetTutorialProgress(); // start the walkthrough from the first bubble
+    onTutorial();
+    socket.emit(
+      'room:create',
+      { nickname: name, teamSelectionMode: 'manual', targetScore: TUTORIAL_TARGET, tutorial: true },
+      (res: Ack<JoinResult>) => {
+        if (!res.ok) return onError(res.error);
+        onJoined(res.data.room, res.data.selfId, res.data.token);
+        socket.emit('room:setSeat', { seat: 0 });
+        socket.emit('room:addBot', { difficulty: 'easy' });
+        socket.emit('room:addBot', { difficulty: 'easy' });
+        socket.emit('room:addBot', { difficulty: 'easy' });
+        socket.emit('game:start');
+      },
+    );
   };
 
   return (
@@ -117,6 +146,18 @@ export function Home({ onJoined, onError }: Props) {
           <button className="btn btn--primary" onClick={createRoom}>
             방 만들기
           </button>
+
+          <div className="tutorial-cta">
+            <div className="tutorial-cta__divider">
+              <span>처음이신가요?</span>
+            </div>
+            <button className="btn btn--tutorial" onClick={startTutorial}>
+              🎓 튜토리얼 모드
+            </button>
+            <p className="tutorial-cta__note">
+              짹짹봇 3명과 함께 게임 흐름에 따라 규칙을 익혀요. 혼자 연습할 수 있어요.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="panel">

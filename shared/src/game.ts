@@ -115,9 +115,41 @@ function emptyTrick(): Trick {
   return { plays: [], top: null, owner: null };
 }
 
+/** Options for {@link startHand} — currently only the tutorial's rigged deal. */
+export interface DealOptions {
+  /**
+   * Tutorial aid: guarantee this seat receives all four special cards (참새·개·
+   * 봉황·용) within its 14, so a first-time player can try each one. The rest of
+   * the deck is still shuffled normally.
+   */
+  stackSpecialsForSeat?: Seat;
+}
+
+/**
+ * Reorder a shuffled deck so `seat`'s first-deal block opens with the four
+ * special cards. Each seat's full hand is `deck[seat*8 .. seat*8+8)` (first deal)
+ * plus its slice of the held-back 24, so placing the specials at the front of the
+ * first-deal block lands them all in that seat's 14 cards.
+ */
+function stackSpecials(deck: Card[], seat: Seat): Card[] {
+  const specials = deck.filter((c) => c.kind === 'special'); // exactly 4
+  const others = deck.filter((c) => c.kind !== 'special');
+  const targets = new Set(specials.map((_, i) => seat * FIRST_DEAL + i));
+  const out: Card[] = new Array(deck.length);
+  let si = 0;
+  let oi = 0;
+  for (let i = 0; i < deck.length; i++) {
+    out[i] = targets.has(i) ? specials[si++] : others[oi++];
+  }
+  return out;
+}
+
 /** Shuffle and deal the first 8 cards to each player; hold back the rest. */
-export function startHand(rng: () => number = Math.random): GameState {
-  const deck = shuffle(createDeck(), rng);
+export function startHand(rng: () => number = Math.random, opts?: DealOptions): GameState {
+  let deck = shuffle(createDeck(), rng);
+  if (opts?.stackSpecialsForSeat !== undefined) {
+    deck = stackSpecials(deck, opts.stackSpecialsForSeat);
+  }
   const players: PlayerHandState[] = SEATS.map((seat) => ({
     seat,
     hand: deck.slice(seat * FIRST_DEAL, seat * FIRST_DEAL + FIRST_DEAL).sort(byDisplayOrder),

@@ -8,6 +8,8 @@ import { Demo } from './pages/Demo';
 
 // Persisted reconnect session — lets us rejoin our seat after a drop/refresh.
 const SESSION_KEY = 'tichu.session';
+// Marks the current room as a solo tutorial so the coach overlay survives a refresh.
+const TUTORIAL_KEY = 'tichu.tutorial';
 type Session = { code: string; token: string };
 function loadSession(): Session | null {
   try {
@@ -42,6 +44,7 @@ export function App() {
   const [error, setError] = useState('');
   const [praiseAt, setPraiseAt] = useState(0); // head-pat-the-dev easter egg
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [tutorial, setTutorial] = useState(() => localStorage.getItem(TUTORIAL_KEY) === '1');
 
   // Dev-only UI showcase: open with #demo to view the in-game screen solo.
   const [hash, setHash] = useState(window.location.hash);
@@ -58,6 +61,8 @@ export function App() {
     const onClosed = () => {
       // Room was dissolved (host closed it) — drop everything and go home.
       clearSession();
+      localStorage.removeItem(TUTORIAL_KEY);
+      setTutorial(false);
       setRoom(null);
       setView(null);
       setSelfId('');
@@ -108,6 +113,8 @@ export function App() {
           // Drop the dead session and return to the home screen instead of
           // leaving a stale game view whose buttons would all error.
           clearSession();
+          localStorage.removeItem(TUTORIAL_KEY);
+          setTutorial(false);
           setRoom(null);
           setView(null);
           setSelfId('');
@@ -131,9 +138,18 @@ export function App() {
   const handleLeave = () => {
     socket.emit('room:leave'); // server removes us (and purges the room if empty)
     clearSession();
+    localStorage.removeItem(TUTORIAL_KEY);
+    setTutorial(false);
     setRoom(null);
     setView(null);
     setSelfId('');
+  };
+
+  // Enter solo tutorial mode: flag it (so the coach shows and survives a refresh)
+  // and reset lesson progress so the walkthrough starts from the first bubble.
+  const handleTutorial = () => {
+    localStorage.setItem(TUTORIAL_KEY, '1');
+    setTutorial(true);
   };
 
   const inGame = hash === '#demo' || Boolean(room && view);
@@ -206,11 +222,11 @@ export function App() {
         {hash === '#demo' ? (
           <Demo />
         ) : room && view ? (
-          <GameView view={view} room={room} onLeave={handleLeave} />
+          <GameView view={view} room={room} onLeave={handleLeave} tutorial={tutorial} />
         ) : room ? (
           <RoomView room={room} selfId={selfId} onLeave={handleLeave} />
         ) : (
-          <Home onJoined={handleJoined} onError={setError} />
+          <Home onJoined={handleJoined} onError={setError} onTutorial={handleTutorial} />
         )}
       </main>
     </div>

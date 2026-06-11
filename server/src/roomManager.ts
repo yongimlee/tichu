@@ -61,6 +61,7 @@ export class RoomManager {
     nickname: string,
     teamSelectionMode: TeamSelectionMode,
     targetScore: number,
+    tutorial = false,
   ): { room: Room; token: string } {
     const host: Player = {
       id: socketId,
@@ -77,6 +78,7 @@ export class RoomManager {
       targetScore: normalizeTarget(targetScore),
       players: [host],
       createdAt: Date.now(),
+      tutorial,
     };
     this.rooms.set(room.code, room);
     this.playerRooms.set(socketId, room.code);

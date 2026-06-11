@@ -19,11 +19,14 @@ import {
 import { socket } from '../socket';
 import { CardChip, cardText } from '../components/CardChip';
 import { RulesGuide } from '../components/RulesGuide';
+import { TutorialCoach } from '../components/TutorialCoach';
 
 interface Props {
   view: PlayerView;
   room: Room;
   onLeave: () => void;
+  /** Tutorial mode — show the contextual coach overlay walking through the rules. */
+  tutorial?: boolean;
 }
 
 // Selectable ranks for a Mahjong wish (2..14); face cards show J/Q/K/A.
@@ -31,7 +34,7 @@ const WISH_RANKS = Array.from({ length: 13 }, (_, i) => i + 2);
 const RANK_FACE: Record<number, string> = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 const rankLabel = (r: number) => RANK_FACE[r] ?? String(r);
 
-export function GameView({ view, room, onLeave }: Props) {
+export function GameView({ view, room, onLeave, tutorial = false }: Props) {
   const nameOf = useMemo(() => {
     const map = new Map<Seat, string>();
     for (const p of room.players) if (p.seat !== null) map.set(p.seat, p.nickname);
@@ -114,6 +117,20 @@ export function GameView({ view, room, onLeave }: Props) {
   const self = view.seats[view.selfSeat];
   const isHost = room.players.find((p) => p.seat === view.selfSeat)?.isHost ?? false;
 
+  // Tutorial: special-card names currently picked up in the play-phase hand, so the
+  // coach can explain a special the instant the player selects it. Cleared off-phase.
+  const [selectedSpecials, setSelectedSpecials] = useState<string[]>([]);
+  useEffect(() => {
+    if (view.phase !== 'playing') setSelectedSpecials([]);
+  }, [view.phase]);
+
+  // Tutorial: where the Mahjong is staged in the exchange (so the coach can warn about
+  // handing the first lead/wish to an opponent). Cleared once we leave the exchange.
+  const [mahjongExchange, setMahjongExchange] = useState<'none' | 'partner' | 'opponent'>('none');
+  useEffect(() => {
+    if (view.phase !== 'exchange') setMahjongExchange('none');
+  }, [view.phase]);
+
   return (
     <div className={`game${bombFlash ? ' game--bomb' : ''}`}>
       {bombFlash && (
@@ -158,15 +175,34 @@ export function GameView({ view, room, onLeave }: Props) {
       />
 
       {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
-      {view.phase === 'exchange' && <Exchange view={view} nameOf={nameOf} />}
+      {view.phase === 'exchange' && (
+        <Exchange
+          view={view}
+          nameOf={nameOf}
+          onMahjongExchange={tutorial ? setMahjongExchange : undefined}
+        />
+      )}
       {view.phase === 'playing' && (
-        <Playing view={view} nameOf={nameOf} dogFlash={dogFlash} bombFlash={bombFlash} />
+        <Playing
+          view={view}
+          nameOf={nameOf}
+          dogFlash={dogFlash}
+          bombFlash={bombFlash}
+          onSpecialsSelected={tutorial ? setSelectedSpecials : undefined}
+        />
       )}
       {view.phase === 'scoring' && <Scoring view={view} isHost={isHost} nameOf={nameOf} />}
       {view.phase === 'finished' && <Finished view={view} isHost={isHost} onLeave={onLeave} />}
 
       <EmoteBar onEmote={sendEmote} />
       <RulesGuide />
+      {tutorial && (
+        <TutorialCoach
+          view={view}
+          selectedSpecials={selectedSpecials}
+          mahjongExchange={mahjongExchange}
+        />
+      )}
     </div>
   );
 }
@@ -562,7 +598,16 @@ type SlotKey = 'toLeft' | 'toPartner' | 'toRight';
 // so we can fall back to it; the active UI is the tap-to-assign panel below.
 const USE_EXCHANGE_DROPDOWN = false;
 
-function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => string }) {
+function Exchange({
+  view,
+  nameOf,
+  onMahjongExchange,
+}: {
+  view: PlayerView;
+  nameOf: (s: Seat) => string;
+  /** Tutorial: report where the Mahjong is currently staged (partner vs opponent). */
+  onMahjongExchange?: (target: 'none' | 'partner' | 'opponent') => void;
+}) {
   const [picks, setPicks] = useState<Record<SlotKey, string>>({
     toLeft: '',
     toPartner: '',
@@ -573,6 +618,19 @@ function Exchange({ view, nameOf }: { view: PlayerView; nameOf: (s: Seat) => str
 
   const done = view.seats[view.selfSeat].hasExchanged;
   const grandDeclared = view.seats[view.selfSeat].grandTichu;
+
+  // Tutorial only: tell the coach which slot the Mahjong is staged in (toPartner =
+  // partner; toLeft/toRight = opponents). No-op (callback absent) in normal games.
+  useEffect(() => {
+    if (!onMahjongExchange) return;
+    const mahjong = view.hand.find((c) => c.kind === 'special' && c.name === 'mahjong');
+    let target: 'none' | 'partner' | 'opponent' = 'none';
+    if (mahjong) {
+      if (picks.toPartner === mahjong.id) target = 'partner';
+      else if (picks.toLeft === mahjong.id || picks.toRight === mahjong.id) target = 'opponent';
+    }
+    onMahjongExchange(target);
+  }, [picks, view.hand, onMahjongExchange]);
 
   const slots: { key: SlotKey; label: string; seat: Seat; side: 'ours' | 'theirs' }[] = [
     { key: 'toLeft', label: '왼쪽', seat: nextSeat(view.selfSeat), side: 'theirs' },
@@ -709,11 +767,14 @@ function Playing({
   nameOf,
   dogFlash,
   bombFlash,
+  onSpecialsSelected,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   dogFlash: { from: Seat; to: Seat; key: number } | null;
   bombFlash: { from: Seat; level: number; key: number } | null;
+  /** Tutorial: report which special cards are currently selected, for the coach. */
+  onSpecialsSelected?: (names: string[]) => void;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
@@ -726,6 +787,17 @@ function Playing({
   useEffect(() => {
     localStorage.setItem('tichu.suggest', suggestOn ? 'on' : 'off');
   }, [suggestOn]);
+
+  // Tutorial only: surface the special cards currently picked up so the coach can
+  // explain one the moment it's selected. No-op (callback absent) in normal games.
+  useEffect(() => {
+    if (!onSpecialsSelected) return;
+    const names: string[] = [];
+    for (const c of view.hand) {
+      if (selected.has(c.id) && c.kind === 'special') names.push(c.name);
+    }
+    onSpecialsSelected(names);
+  }, [selected, view.hand, onSpecialsSelected]);
 
   const self = view.seats[view.selfSeat];
   const myTurn = view.turn === view.selfSeat && view.pendingDragon === null;
@@ -919,7 +991,12 @@ function Playing({
             자동으로 패스합니다.
           </p>
         ) : (
-          <p className="hint">🚫 낼 수 있는 조합이 없습니다 — 패스하세요.</p>
+          // Not stuck despite an empty suggestion list — the only beat is the Phoenix
+          // as a single (deliberately omitted from 추천). Point the player to it.
+          <p className="hint">
+            🐦‍🔥 일반 조합은 없지만 <strong>봉황</strong>으로 받아칠 수 있어요 — 봉황을 직접 골라 내거나,
+            아끼려면 패스하세요.
+          </p>
         )
       )}
 

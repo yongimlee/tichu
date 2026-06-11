@@ -25,12 +25,16 @@ interface MatchRecord {
   endedAt: number | null; // epoch ms when the match finished (winner decided)
 }
 
+// Tutorial rooms seat the human at 0; rig the FIRST deal so they hold all four
+// specials (later hands deal normally — see nextHand).
+const TUTORIAL_DEAL = { stackSpecialsForSeat: 0 } as const;
+
 export class GameManager {
   private matches = new Map<string, MatchRecord>();
 
-  start(code: string, target: number = DEFAULT_TARGET): GameState {
+  start(code: string, target: number = DEFAULT_TARGET, tutorial = false): GameState {
     const record: MatchRecord = {
-      state: startHand(cryptoRandom),
+      state: startHand(cryptoRandom, tutorial ? TUTORIAL_DEAL : undefined),
       scores: { A: 0, B: 0 },
       target,
       handNumber: 1,
@@ -94,6 +98,8 @@ export class GameManager {
     if (r.winner) throw new Error('이미 종료된 매치입니다.');
     if (r.state.phase !== 'scoring') throw new Error('아직 현재 판이 끝나지 않았습니다.');
     r.handNumber += 1;
+    // Only the first tutorial hand is rigged — later hands deal normally so the
+    // player practises with realistic hands once they've met every special card.
     r.state = startHand(cryptoRandom);
     return r.state;
   }
