@@ -529,15 +529,27 @@ function SeatStrip({
               {s.tichu && <span className="badge">T</span>}
               {view.phase === 'exchange' && s.hasExchanged && <span className="badge">✓</span>}
             </div>
-            {isTurn && <div className="seatstrip__turn">▶ 차례</div>}
-            {isDragon && <div className="seatstrip__turn">🐉 용 넘기는 중</div>}
-            {s.captured.length > 0 && (
-              <div className="seatstrip__captured">
-                <div className="seatstrip__points">
-                  획득 {capturedPoints(s.captured)}점 · {s.captured.length}장
+            {/* Reserve the turn line + capture pile for the whole playing phase so a
+                changing turn or a freshly won pile never reflows the seat grid. The
+                slots stay mounted at a fixed height; only their contents toggle. */}
+            {view.phase === 'playing' && (
+              <>
+                <div className="seatstrip__turn">
+                  {isTurn ? '▶ 차례' : isDragon ? '🐉 용 넘기는 중' : ''}
                 </div>
-                <CardBackStack count={s.captured.length} />
-              </div>
+                <div
+                  className={`seatstrip__captured${s.captured.length > 0 ? ' is-filled' : ''}`}
+                >
+                  {s.captured.length > 0 && (
+                    <>
+                      <div className="seatstrip__points">
+                        획득 {capturedPoints(s.captured)}점 · {s.captured.length}장
+                      </div>
+                      <CardBackStack count={s.captured.length} />
+                    </>
+                  )}
+                </div>
+              </>
             )}
           </div>
         );

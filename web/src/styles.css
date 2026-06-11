@@ -859,6 +859,7 @@ input:focus {
 
 .seatstrip__turn {
   margin-top: 0.3rem;
+  min-height: 1rem; /* reserved height — empty on off-turn seats so the grid never reflows */
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--accent);
@@ -869,11 +870,18 @@ input:focus {
   font-size: 0.7rem;
 }
 
-/* Captured-cards pile (mini cards) under each seat panel + in the scoreboard. */
+/* Captured-cards pile (mini cards) under each seat panel + in the scoreboard.
+   The slot is reserved (fixed min-height, transparent border) for the whole
+   playing phase so winning a pile never grows the seat and reflows the grid;
+   the dashed divider + contents only appear once a player has captured cards. */
 .seatstrip__captured {
   margin-top: 0.4rem;
-  border-top: 1px dashed var(--border);
+  min-height: 52px;
+  border-top: 1px dashed transparent;
   padding-top: 0.35rem;
+}
+.seatstrip__captured.is-filled {
+  border-top-color: var(--border);
 }
 
 .seatstrip__points {
