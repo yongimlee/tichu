@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { nextSeat, partnerSeat, type Card, type PlayerView, type Seat } from '@tichu/shared';
+import { socket } from '../socket';
 
 /** Where the Mahjong (참새) is currently staged in the exchange, relative to me. */
 type MahjongExchange = 'none' | 'partner' | 'opponent';
@@ -489,6 +490,18 @@ export function TutorialCoach({
     () => (current ? LESSONS.findIndex((l) => l.id === current.id) + 1 : 0),
     [current],
   );
+
+  // Freeze the fill bots while a coach bubble is on screen so the game doesn't
+  // advance before the player has read it; release them the moment it's dismissed
+  // (or help is turned off). The server honours this only in tutorial rooms.
+  const botsPaused = coachOn && current != null;
+  useEffect(() => {
+    socket.emit('tutorial:botPause', { paused: botsPaused });
+  }, [botsPaused]);
+  // On unmount (leaving the game) make sure we never leave the bots frozen.
+  useEffect(() => () => {
+    socket.emit('tutorial:botPause', { paused: false });
+  }, []);
 
   const dismiss = () => {
     if (current) setSeen((prev) => new Set(prev).add(current.id));

@@ -64,6 +64,47 @@ test('exchange conserves all 56 cards and sets the Mahjong holder as leader', ()
   );
 });
 
+test('tutorial deal rigs seat 0 with all specials + a bomb, and seat 1 with a bomb', () => {
+  // A four-of-a-kind, or a same-suit run of 5+ (straight flush).
+  const handHasBomb = (hand: GameState['players'][number]['hand']): boolean => {
+    const byRank = new Map<number, number>();
+    const bySuit = new Map<string, Set<number>>();
+    for (const c of hand) {
+      if (c.kind !== 'suit') continue;
+      byRank.set(c.rank, (byRank.get(c.rank) ?? 0) + 1);
+      if (!bySuit.has(c.suit)) bySuit.set(c.suit, new Set());
+      bySuit.get(c.suit)!.add(c.rank);
+    }
+    if ([...byRank.values()].some((n) => n >= 4)) return true;
+    for (const ranks of bySuit.values()) {
+      let run = 0;
+      for (let r = 2; r <= 14; r++) {
+        run = ranks.has(r) ? run + 1 : 0;
+        if (run >= 5) return true;
+      }
+    }
+    return false;
+  };
+
+  // Run several seeds: the bomb rank/shape is random, so assert a bomb exists, not a rank.
+  for (const seed of [1, 7, 13, 42, 99, 256]) {
+    const state = startHand(seededRng(seed), { stackSpecialsForSeat: 0, stackBombForSeats: [0, 1] });
+    for (const seat of SEATS) declareGrandTichu(state, seat, false); // deal the rest
+
+    const specials = state.players[0].hand
+      .filter((c) => c.kind === 'special')
+      .map((c) => (c.kind === 'special' ? c.name : ''))
+      .sort();
+    assert.deepEqual(specials, ['dog', 'dragon', 'mahjong', 'phoenix'], `seed ${seed}: specials`);
+    assert.ok(handHasBomb(state.players[0].hand), `seed ${seed}: seat 0 holds a bomb`);
+    assert.ok(handHasBomb(state.players[1].hand), `seed ${seed}: seat 1 holds a bomb`);
+
+    // The rig only reorders — the full 56-card deck is still intact.
+    const ids = allIds(state).concat(state.undealt.map((c) => c.id));
+    assert.equal(new Set(ids).size, 56, `seed ${seed}: no duplicate or lost cards`);
+  }
+});
+
 test('a small Tichu can be declared during the exchange phase', () => {
   const state = startHand(seededRng(5));
   for (const seat of SEATS) declareGrandTichu(state, seat, false);

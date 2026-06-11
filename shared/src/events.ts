@@ -85,6 +85,12 @@ export interface ClientToServerEvents {
   'room:leave': () => void;
   /** Fun: someone patted the developer's head. Server logs who (or "anonymous"). */
   'dev:pat': () => void;
+  /**
+   * Tutorial only: freeze (or release) the fill bots while a coach message is on
+   * screen, so the game doesn't advance before the player has read the guidance.
+   * The server ignores it outside a tutorial room.
+   */
+  'tutorial:botPause': (payload: { paused: boolean }) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

@@ -530,10 +530,50 @@ export function pendingBotAction(room: Room, state: GameState): BotAction | null
   return null;
 }
 
+/**
+ * Tutorial nudge for the rigged bomb bot — teach the bomb *in context*, but not on
+ * the opening trick:
+ *   • During the FIRST trick it plays normally yet as if the bomb weren't in hand,
+ *     so the four-of-a-kind is never broken up — the human sees a clean trick run
+ *     its course and learns who wins it, bomb-free.
+ *   • From the SECOND trick on (once any trick has been collected) it drops the
+ *     bomb at its first legal chance, so the "상대가 폭탄을!" lesson fires.
+ * Falls back to the seat's normal policy when there's no bomb to manage.
+ */
+function tutorialMove(state: GameState, seat: Seat, difficulty: BotDifficulty): BotMove {
+  const hand = state.players[seat].hand;
+  const bombs = bombCardIds(hand);
+  if (bombs.size === 0) return moveFor(difficulty)(state, seat); // nothing to manage
+
+  // A fulfillable wish must be obeyed even if it breaks the bomb (the rules force it).
+  const top = state.trick.top;
+  if (state.wish !== null && fulfillingMoves(hand, top, state.wish).length > 0) {
+    return moveFor(difficulty)(state, seat);
+  }
+
+  // Second trick onward: a collected trick means captured cards exist somewhere.
+  const aTrickHasResolved = state.captured.some((pile) => pile.length > 0);
+  if (aTrickHasResolved) {
+    const bomb = enumerateMoves(hand, top).find((m) => m.bombLevel > 0);
+    if (bomb) return { play: bomb.cards.map((c) => c.id) };
+  }
+
+  // First trick (or no playable bomb yet): decide as if the bomb weren't in hand,
+  // so it's preserved intact for a later trick instead of being frittered away.
+  const withoutBomb: GameState = {
+    ...state,
+    players: state.players.map((p, i) =>
+      i === seat ? { ...p, hand: p.hand.filter((c) => !bombs.has(c.id)) } : p,
+    ),
+  };
+  return moveFor(difficulty)(withoutBomb, seat);
+}
+
 export function applyBotAction(
   action: BotAction,
   state: GameState,
   difficulty: BotDifficulty = 'hard',
+  eagerBomb = false,
 ): void {
   switch (action.type) {
     case 'grand':
@@ -546,7 +586,9 @@ export function applyBotAction(
       giveDragon(state, action.seat, chooseDragonTarget(state, action.seat));
       break;
     case 'move': {
-      const m = moveFor(difficulty)(state, action.seat);
+      const m = eagerBomb
+        ? tutorialMove(state, action.seat, difficulty)
+        : moveFor(difficulty)(state, action.seat);
       if (m.pass) pass(state, action.seat);
       else playCards(state, action.seat, m.play ?? [], m.wish !== undefined ? { wish: m.wish } : {});
       break;
@@ -560,6 +602,9 @@ export class BotDriver {
   // worker thread), so this guards against a second step starting on the same
   // room — e.g. a human's out-of-turn bomb kicking the driver mid-think.
   private busy = new Set<string>();
+  // Tutorial rooms whose bots are frozen because a coach message is on screen.
+  // While paused, `kick` is a no-op so the game waits at the player's reading pace.
+  private paused = new Set<string>();
 
   constructor(
     private readonly io: TichuServer,
@@ -573,6 +618,7 @@ export class BotDriver {
    * bot — is up next (debounced per room).
    */
   kick(code: string): void {
+    if (this.paused.has(code)) return; // tutorial: a coach message is being read
     if (this.timers.has(code) || this.busy.has(code)) return;
     const room = this.rooms.getRoom(code);
     const state = this.games.getState(code);
@@ -596,6 +642,24 @@ export class BotDriver {
     }, delay);
     timer.unref?.();
     this.timers.set(code, timer);
+  }
+
+  /**
+   * Tutorial: freeze or release a room's bots. Pausing cancels any move already
+   * scheduled so the table stops where it is; releasing re-kicks so the next bot
+   * action (if any) resumes immediately.
+   */
+  setPaused(code: string, paused: boolean): void {
+    if (paused) {
+      this.paused.add(code);
+      const timer = this.timers.get(code);
+      if (timer) {
+        clearTimeout(timer);
+        this.timers.delete(code);
+      }
+    } else if (this.paused.delete(code)) {
+      this.kick(code);
+    }
   }
 
   /** The tier a seat plays at; an offline human's stand-in uses the full heuristic. */
@@ -622,8 +686,12 @@ export class BotDriver {
       if (action.type === 'move' && this.pool && this.difficultyOf(room, action.seat) === 'expert') {
         await this.expertMove(code, action.seat);
       } else {
+        // Tutorial first hand only: nudge a bomb-holding bot to play it (the deal
+        // rigs an opponent a bomb) so the bomb lesson reliably fires.
+        const eagerBomb =
+          room.tutorial === true && this.games.getMatchInfo(code)?.handNumber === 1;
         try {
-          applyBotAction(action, state, this.difficultyOf(room, action.seat));
+          applyBotAction(action, state, this.difficultyOf(room, action.seat), eagerBomb);
         } catch {
           // Shouldn't happen, but never loop forever: fall back to a pass if we can.
           try {

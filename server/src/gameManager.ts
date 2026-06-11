@@ -26,8 +26,11 @@ interface MatchRecord {
 }
 
 // Tutorial rooms seat the human at 0; rig the FIRST deal so they hold all four
-// specials (later hands deal normally — see nextHand).
-const TUTORIAL_DEAL = { stackSpecialsForSeat: 0 } as const;
+// specials AND a (randomly chosen) bomb, and give an opponent bot (seat 1) its
+// own random bomb too — so both bomb lessons reliably appear on the first hand
+// (the bot is nudged to play its bomb; see bot.ts). Each bomb is a fresh
+// four-of-a-kind or, occasionally, a straight flush. Later hands deal normally.
+const TUTORIAL_DEAL = { stackSpecialsForSeat: 0, stackBombForSeats: [0, 1] } as const;
 
 export class GameManager {
   private matches = new Map<string, MatchRecord>();

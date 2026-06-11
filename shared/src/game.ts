@@ -1,4 +1,4 @@
-import { cardPoints, createDeck, rankLabel, shuffle, type Card } from './cards';
+import { cardPoints, createDeck, rankLabel, shuffle, SUITS, type Card } from './cards';
 import {
   canBeat,
   detectCombination,
@@ -123,23 +123,86 @@ export interface DealOptions {
    * the deck is still shuffled normally.
    */
   stackSpecialsForSeat?: Seat;
+  /**
+   * Tutorial aid: guarantee each listed seat receives a bomb, so the bomb lessons
+   * reliably appear — the human learns they hold one, and a rigged opponent bot
+   * plays one (see the bot's eager-bomb tutorial behaviour). Each seat gets its
+   * own randomly-chosen bomb (a four-of-a-kind, or occasionally a straight flush).
+   */
+  stackBombForSeats?: readonly Seat[];
+}
+
+// How often a rigged tutorial bomb is a straight flush rather than a four-of-a-kind.
+const STRAIGHT_FLUSH_CHANCE = 0.3;
+const STRAIGHT_BOMB_LEN = 5; // shortest straight flush
+
+/**
+ * Pick a random bomb whose cards are all still free: usually a four-of-a-kind (a
+ * random rank, all four suits), occasionally a same-suit run of 5 (a straight
+ * flush). Returns the concrete deck cards via `byId`.
+ */
+function randomBomb(byId: Map<string, Card>, used: Set<string>, rng: () => number): Card[] {
+  const fourOfAKind = (): string[] => {
+    const rank = 2 + Math.floor(rng() * 13); // 2..14
+    return SUITS.map((s) => `${s}-${rank}`);
+  };
+  const straightFlush = (): string[] => {
+    const suit = SUITS[Math.floor(rng() * SUITS.length)];
+    const start = 2 + Math.floor(rng() * (13 - STRAIGHT_BOMB_LEN + 1)); // 2..10 → top ≤ 14
+    return Array.from({ length: STRAIGHT_BOMB_LEN }, (_, k) => `${suit}-${start + k}`);
+  };
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const ids = rng() < STRAIGHT_FLUSH_CHANCE ? straightFlush() : fourOfAKind();
+    if (ids.every((id) => !used.has(id))) return ids.map((id) => byId.get(id)!);
+  }
+  // Exceedingly unlikely with a fresh deck; fall back to any free four-of-a-kind.
+  for (let rank = 2; rank <= 14; rank++) {
+    const ids = SUITS.map((s) => `${s}-${rank}`);
+    if (ids.every((id) => !used.has(id))) return ids.map((id) => byId.get(id)!);
+  }
+  throw new Error('no free bomb available'); // unreachable for 2 bombs in a 56-card deck
 }
 
 /**
- * Reorder a shuffled deck so `seat`'s first-deal block opens with the four
- * special cards. Each seat's full hand is `deck[seat*8 .. seat*8+8)` (first deal)
- * plus its slice of the held-back 24, so placing the specials at the front of the
- * first-deal block lands them all in that seat's 14 cards.
+ * Reorder a shuffled deck so the rigged tutorial cards land in the right hands.
+ * A seat's full hand is its first-deal block `deck[seat*8 .. seat*8+8)` plus its
+ * slice of the held-back 24 (`deck[32+seat*6 .. +6)`), so reserving any of those
+ * 14 index slots guarantees a card reaches that seat. Specials take the front of
+ * the first-deal block; each requested bomb fills that seat's next free slots
+ * (a 5-card straight flush may spill into the held-back slots). The rest keep the
+ * shuffled order.
  */
-function stackSpecials(deck: Card[], seat: Seat): Card[] {
-  const specials = deck.filter((c) => c.kind === 'special'); // exactly 4
-  const others = deck.filter((c) => c.kind !== 'special');
-  const targets = new Set(specials.map((_, i) => seat * FIRST_DEAL + i));
+function rigDeal(deck: Card[], opts: DealOptions, rng: () => number): Card[] {
+  const byId = new Map(deck.map((c) => [c.id, c] as const));
+  const reserved = new Map<number, Card>(); // deck index -> card forced there
+  const used = new Set<string>(); // ids already reserved, so leftovers don't reuse them
+
+  const heldBase = SEATS.length * FIRST_DEAL; // 32
+  const per = HAND_SIZE - FIRST_DEAL; // 6 held-back cards per seat
+  const seatSlots = (seat: Seat): number[] => [
+    ...Array.from({ length: FIRST_DEAL }, (_, i) => seat * FIRST_DEAL + i),
+    ...Array.from({ length: per }, (_, i) => heldBase + seat * per + i),
+  ];
+  const reserveInto = (seat: Seat, cards: Card[]) => {
+    const free = seatSlots(seat).filter((i) => !reserved.has(i));
+    cards.forEach((c, k) => {
+      reserved.set(free[k], c);
+      used.add(c.id);
+    });
+  };
+
+  if (opts.stackSpecialsForSeat !== undefined) {
+    reserveInto(opts.stackSpecialsForSeat, deck.filter((c) => c.kind === 'special')); // the 4
+  }
+  for (const seat of opts.stackBombForSeats ?? []) {
+    reserveInto(seat, randomBomb(byId, used, rng));
+  }
+
+  const leftovers = deck.filter((c) => !used.has(c.id));
   const out: Card[] = new Array(deck.length);
-  let si = 0;
-  let oi = 0;
+  let li = 0;
   for (let i = 0; i < deck.length; i++) {
-    out[i] = targets.has(i) ? specials[si++] : others[oi++];
+    out[i] = reserved.get(i) ?? leftovers[li++];
   }
   return out;
 }
@@ -151,8 +214,8 @@ function stackSpecials(deck: Card[], seat: Seat): Card[] {
  */
 export function startHand(rng: () => number, opts?: DealOptions): GameState {
   let deck = shuffle(createDeck(), rng);
-  if (opts?.stackSpecialsForSeat !== undefined) {
-    deck = stackSpecials(deck, opts.stackSpecialsForSeat);
+  if (opts && (opts.stackSpecialsForSeat !== undefined || opts.stackBombForSeats?.length)) {
+    deck = rigDeal(deck, opts, rng);
   }
   const players: PlayerHandState[] = SEATS.map((seat) => ({
     seat,

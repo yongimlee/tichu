@@ -297,6 +297,13 @@ export function registerSocketHandlers(
     io.to(room.code).emit('game:emote', { seat: player.seat, emoji });
   });
 
+  socket.on('tutorial:botPause', ({ paused }) => {
+    // Tutorial rooms only — never let a regular client freeze a real match's bots.
+    const room = rooms.getRoomBySocket(socket.id);
+    if (!room || room.tutorial !== true) return;
+    bots.setPaused(room.code, paused === true);
+  });
+
   socket.on('dev:pat', () => {
     const now = Date.now();
     if (now - (socket.data.lastPatAt ?? 0) < 1500) return; // light anti-spam
