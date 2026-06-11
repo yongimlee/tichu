@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   BOT_DIFFICULTIES,
   BOT_DIFFICULTY_EMOJI,
@@ -9,6 +10,11 @@ import {
 } from '@tichu/shared';
 import { socket } from '../socket';
 import { RulesGuide } from '../components/RulesGuide';
+
+// Base for shareable invite links. On the mobile build the page is served from
+// https://localhost, so prefer the baked deployed URL (VITE_SERVER_URL); on the web
+// it's unset and we fall back to the current origin (same-origin single deploy).
+const linkBase = (import.meta.env.VITE_SERVER_URL || window.location.origin).replace(/\/$/, '');
 
 interface Props {
   room: Room;
@@ -36,8 +42,13 @@ export function RoomView({ room, selfId, onLeave }: Props) {
   const randomize = () => socket.emit('room:randomizeTeams');
   const start = () => socket.emit('game:start');
 
-  const copyCode = () => {
-    void navigator.clipboard?.writeText(room.code);
+  // Shareable invite link — opening it pre-fills the join form with this code.
+  const inviteUrl = `${linkBase}/?code=${room.code}`;
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+  const copy = (text: string, kind: 'code' | 'link') => {
+    void navigator.clipboard?.writeText(text);
+    setCopied(kind);
+    setTimeout(() => setCopied((c) => (c === kind ? null : c)), 1500);
   };
 
   return (
@@ -48,9 +59,14 @@ export function RoomView({ room, selfId, onLeave }: Props) {
           <div className="invite__code">{room.code}</div>
           <div className="invite__meta">목표 {room.targetScore}점</div>
         </div>
-        <button className="btn btn--ghost" onClick={copyCode}>
-          코드 복사
-        </button>
+        <div className="invite__actions">
+          <button className="btn btn--ghost" onClick={() => copy(inviteUrl, 'link')}>
+            {copied === 'link' ? '복사 완료' : '🔗 초대 링크 복사'}
+          </button>
+          <button className="btn btn--ghost" onClick={() => copy(room.code, 'code')}>
+            {copied === 'code' ? '복사 완료' : '코드 복사'}
+          </button>
+        </div>
       </section>
 
       <section className="teams">

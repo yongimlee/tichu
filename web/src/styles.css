@@ -275,6 +275,20 @@ input:focus {
   justify-content: space-between;
 }
 
+.invite__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  /* Fixed width sized for the longest label ("🔗 초대 링크 복사") so the buttons
+     don't resize when the text swaps to "복사 완료". */
+  flex: 0 0 auto;
+  width: 12rem;
+}
+.invite__actions .btn {
+  white-space: nowrap;
+  text-align: center;
+}
+
 .invite__label {
   font-size: 0.8rem;
   color: var(--muted);
@@ -370,6 +384,10 @@ input:focus {
 }
 
 /* Waiting list */
+/* A little extra breathing room above/below the 대기 중 card (adds to the lobby gap). */
+.waiting {
+  margin: 0.5rem 0;
+}
 /* Drop the heading's default top margin so it sits at the card's padding, not below it. */
 .waiting h3 {
   margin: 0 0 0.5rem;
@@ -440,6 +458,11 @@ input:focus {
   text-align: center;
   color: var(--muted);
   margin: 0.25rem 0;
+}
+
+/* Lobby "방장을 기다리는 중" hint — match the bot-add guidance text size (.addbot__title). */
+.actions .hint {
+  font-size: 0.8rem;
 }
 
 /* Imminent auto-pass (stuck turn): brighter + a soft pulse so it's clearly active. */

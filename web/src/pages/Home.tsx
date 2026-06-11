@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DEFAULT_TARGET,
   TARGET_OPTIONS,
@@ -24,11 +24,24 @@ const TUTORIAL_TARGET = 200;
 type Tab = 'create' | 'join';
 
 export function Home({ onJoined, onError, onTutorial }: Props) {
-  const [tab, setTab] = useState<Tab>('create');
+  // An invite link (…/?code=ABC123) opens the join tab with the code pre-filled —
+  // the guest only needs a nickname. Read once at mount, then strip the param so a
+  // refresh / re-share doesn't keep the messy URL around.
+  const [tab, setTab] = useState<Tab>(() =>
+    new URLSearchParams(window.location.search).has('code') ? 'join' : 'create',
+  );
   const [nickname, setNickname] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() =>
+    (new URLSearchParams(window.location.search).get('code') ?? '').toUpperCase(),
+  );
   const [teamMode, setTeamMode] = useState<TeamSelectionMode>('manual');
   const [targetScore, setTargetScore] = useState<number>(DEFAULT_TARGET);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('code')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   const handleAck = (res: Ack<JoinResult>) => {
     if (res.ok) onJoined(res.data.room, res.data.selfId, res.data.token);
