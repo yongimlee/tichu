@@ -311,7 +311,10 @@ input:focus {
 /* 팀 A·팀 B are one unified card split by a divider — no gap between them. */
 .teams {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, 1fr) — without the 0 floor each track's min-width is its content's
+     min-content, so a wider seat (long nickname, extra badges/buttons) on one side
+     pushes the divider off-centre and the two teams visibly shift. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -363,6 +366,13 @@ input:focus {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0; /* let a long nickname shrink/ellipsis instead of widening its team column */
+}
+
+.seat__name .seat__nick {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .seat__empty {

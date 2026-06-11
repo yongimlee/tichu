@@ -84,7 +84,7 @@ export function RoomView({ room, selfId, onLeave }: Props) {
                   {player ? (
                     <>
                       <span className="seat__name">
-                        {player.nickname}
+                        <span className="seat__nick">{player.nickname}</span>
                         {player.isBot && (
                           <span className="badge">
                             {BOT_DIFFICULTY_LABELS[player.difficulty ?? DEFAULT_BOT_DIFFICULTY]}
