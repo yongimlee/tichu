@@ -788,6 +788,15 @@ function Playing({
     localStorage.setItem('tichu.suggest', suggestOn ? 'on' : 'off');
   }, [suggestOn]);
 
+  // Whether to auto-pass when stuck (no legal play). On by default to keep the old
+  // behaviour; off lets the player pass manually. Persisted across reloads.
+  const [autoPassOn, setAutoPassOn] = useState(
+    () => localStorage.getItem('tichu.autopass') !== 'off',
+  );
+  useEffect(() => {
+    localStorage.setItem('tichu.autopass', autoPassOn ? 'on' : 'off');
+  }, [autoPassOn]);
+
   // Tutorial only: surface the special cards currently picked up so the coach can
   // explain one the moment it's selected. No-op (callback absent) in normal games.
   useEffect(() => {
@@ -830,9 +839,9 @@ function Playing({
 
   const [autoPassLeft, setAutoPassLeft] = useState(0);
   useEffect(() => {
-    if (!stuck) {
+    if (!stuck || !autoPassOn) {
       setAutoPassLeft(0);
-      return;
+      return; // auto-pass disabled, or not stuck → no countdown, player passes manually
     }
     setAutoPassLeft(Math.ceil(AUTO_PASS_MS / 1000));
     const tick = setInterval(() => setAutoPassLeft((s) => (s > 1 ? s - 1 : s)), 1000);
@@ -844,7 +853,7 @@ function Playing({
       clearInterval(tick);
       clearTimeout(pass);
     };
-  }, [stuck]);
+  }, [stuck, autoPassOn]);
 
   // While a single is on the table you can only beat it with a higher single or
   // a bomb. So restrict to one card at a time — unless the hand actually holds a
@@ -898,25 +907,35 @@ function Playing({
     <section className="card phase">
       <div className="phase__head">
         <h2>플레이</h2>
-        <div className="phase__head-right">
-          <button
-            type="button"
-            className={`btn btn--small suggest-toggle${suggestOn ? ' suggest-toggle--on' : ''}`}
-            role="switch"
-            aria-checked={suggestOn}
-            onClick={() => setSuggestOn((v) => !v)}
-            title="추천 조합 표시 켜기/끄기"
-          >
-            💡 추천 <span className="suggest-toggle__state">{suggestOn ? 'ON' : 'OFF'}</span>
-          </button>
-          <span className={`turntag${myTurn ? ' turntag--mine' : ''}`}>
-            {view.pendingDragon !== null
-              ? `🐉 ${nameOf(view.pendingDragon)}(이)가 용 카드를 넘기는 중`
-              : myTurn
-                ? '내 차례'
-                : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
-          </span>
-        </div>
+        <span className={`turntag${myTurn ? ' turntag--mine' : ''}`}>
+          {view.pendingDragon !== null
+            ? `🐉 ${nameOf(view.pendingDragon)}(이)가 용 카드를 넘기는 중`
+            : myTurn
+              ? '내 차례'
+              : `${nameOf(view.turn ?? view.selfSeat)} 차례`}
+        </span>
+      </div>
+      <div className="phase__toggles">
+        <button
+          type="button"
+          className={`btn btn--small suggest-toggle${suggestOn ? ' suggest-toggle--on' : ''}`}
+          role="switch"
+          aria-checked={suggestOn}
+          onClick={() => setSuggestOn((v) => !v)}
+          title="추천 조합 표시 켜기/끄기"
+        >
+          💡 추천 <span className="suggest-toggle__state">{suggestOn ? 'ON' : 'OFF'}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn--small suggest-toggle${autoPassOn ? ' suggest-toggle--on' : ''}`}
+          role="switch"
+          aria-checked={autoPassOn}
+          onClick={() => setAutoPassOn((v) => !v)}
+          title="낼 카드가 없을 때 자동 패스 켜기/끄기"
+        >
+          ⏭️ 자동패스 <span className="suggest-toggle__state">{autoPassOn ? 'ON' : 'OFF'}</span>
+        </button>
       </div>
 
       <TrickArea view={view} nameOf={nameOf} dogFlash={dogFlash} bombFlash={bombFlash} />
@@ -986,10 +1005,14 @@ function Playing({
 
       {myTurn && suggestions.length === 0 && !isLeading && (
         stuck ? (
-          <p className="hint hint--autopass">
-            🚫 낼 수 있는 카드가 없습니다 — {autoPassLeft || Math.ceil(AUTO_PASS_MS / 1000)}초 후
-            자동으로 패스합니다.
-          </p>
+          autoPassOn ? (
+            <p className="hint hint--autopass">
+              🚫 낼 수 있는 카드가 없습니다 — {autoPassLeft || Math.ceil(AUTO_PASS_MS / 1000)}초 후
+              자동으로 패스합니다.
+            </p>
+          ) : (
+            <p className="hint">🚫 낼 수 있는 카드가 없습니다 — 패스하세요.</p>
+          )
         ) : (
           // Not stuck despite an empty suggestion list — the only beat is the Phoenix
           // as a single (deliberately omitted from 추천). Point the player to it.
