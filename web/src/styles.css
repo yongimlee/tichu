@@ -426,6 +426,12 @@ input:focus {
   gap: 0.6rem;
 }
 
+/* Lobby actions sit flush under the team card once the add-bot row disappears
+   (all seats taken). Separate them by the same gap used between the buttons. */
+.room .actions {
+  margin-top: 0.6rem;
+}
+
 /* Add-bot: one button per difficulty tier (짹짹/댕댕/주작/용용), in a single row. */
 .addbot {
   display: flex;
