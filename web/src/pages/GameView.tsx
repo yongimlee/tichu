@@ -8,6 +8,7 @@ import {
   partnerSeat,
   prevSeat,
   seatTeam,
+  type ActionResult,
   type Card,
   type Combination,
   type CombinationType,
@@ -25,6 +26,8 @@ interface Props {
   view: PlayerView;
   room: Room;
   onLeave: () => void;
+  /** Surface a transient error toast (e.g. a dropped/rejected move). */
+  onError: (message: string) => void;
   /** Tutorial mode — show the contextual coach overlay walking through the rules. */
   tutorial?: boolean;
 }
@@ -34,7 +37,7 @@ const WISH_RANKS = Array.from({ length: 13 }, (_, i) => i + 2);
 const RANK_FACE: Record<number, string> = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 const rankLabel = (r: number) => RANK_FACE[r] ?? String(r);
 
-export function GameView({ view, room, onLeave, tutorial = false }: Props) {
+export function GameView({ view, room, onLeave, onError, tutorial = false }: Props) {
   const nameOf = useMemo(() => {
     const map = new Map<Seat, string>();
     for (const p of room.players) if (p.seat !== null) map.set(p.seat, p.nickname);
@@ -188,6 +191,7 @@ export function GameView({ view, room, onLeave, tutorial = false }: Props) {
           nameOf={nameOf}
           dogFlash={dogFlash}
           bombFlash={bombFlash}
+          onError={onError}
           onSpecialsSelected={tutorial ? setSelectedSpecials : undefined}
         />
       )}
@@ -779,12 +783,15 @@ function Playing({
   nameOf,
   dogFlash,
   bombFlash,
+  onError,
   onSpecialsSelected,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   dogFlash: { from: Seat; to: Seat; key: number } | null;
   bombFlash: { from: Seat; level: number; key: number } | null;
+  /** Surface a transient error toast (dropped/rejected move). */
+  onError: (message: string) => void;
   /** Tutorial: report which special cards are currently selected, for the coach. */
   onSpecialsSelected?: (names: string[]) => void;
 }) {
@@ -832,8 +839,15 @@ function Playing({
   }, [view.trick, view.trickOwner, isLeading]);
 
   const suggestions = useMemo(
-    () => (myTurn ? legalMoves(view.hand, topCombo) : []),
-    [myTurn, view.hand, topCombo],
+    () => (myTurn ? legalMoves(view.hand, topCombo, view.wish) : []),
+    [myTurn, view.hand, topCombo, view.wish],
+  );
+
+  // A fulfillable Mahjong wish binds this turn: the server rejects any play (or
+  // pass) that omits the wished rank, so warn rather than letting it fail silently.
+  const mustFulfillWish = useMemo(
+    () => myTurn && wishBindsHere(view.hand, topCombo, view.wish),
+    [myTurn, view.hand, topCombo, view.wish],
   );
 
   // Collapse the expanded list again whenever the decision changes (new turn / hand).
@@ -859,7 +873,11 @@ function Playing({
     const tick = setInterval(() => setAutoPassLeft((s) => (s > 1 ? s - 1 : s)), 1000);
     const pass = setTimeout(() => {
       // The #demo page has no live game; show the countdown but don't actually emit.
-      if (window.location.hash !== '#demo') socket.emit('game:pass');
+      if (window.location.hash !== '#demo') {
+        socket
+          .timeout(ACTION_ACK_TIMEOUT_MS)
+          .emit('game:pass', (err, res) => onActionAck(err, res, onError));
+      }
     }, AUTO_PASS_MS);
     return () => {
       clearInterval(tick);
@@ -890,6 +908,12 @@ function Playing({
   };
 
   const selectedCards = view.hand.filter((c) => selected.has(c.id));
+  // The wish binds and the picked cards omit it → the server will reject this play.
+  const selectionMissesWish =
+    mustFulfillWish &&
+    view.wish !== null &&
+    selectedCards.length > 0 &&
+    !containsRank(selectedCards, view.wish);
   const hasMahjong = selectedCards.some((c) => c.kind === 'special' && c.name === 'mahjong');
   // Local validity hint (server is authoritative); Phoenix singles read as valid here.
   const localCombo = detectCombination(selectedCards);
@@ -908,11 +932,16 @@ function Playing({
   const play = () => {
     const payload: { cardIds: string[]; wish?: number } = { cardIds: [...selected] };
     if (hasMahjong && wish) payload.wish = Number(wish);
-    socket.emit('game:play', payload);
+    socket
+      .timeout(ACTION_ACK_TIMEOUT_MS)
+      .emit('game:play', payload, (err, res) => onActionAck(err, res, onError));
     setSelected(new Set());
     setWish('');
   };
-  const doPass = () => socket.emit('game:pass');
+  const doPass = () =>
+    socket
+      .timeout(ACTION_ACK_TIMEOUT_MS)
+      .emit('game:pass', (err, res) => onActionAck(err, res, onError));
   const declareTichu = () => socket.emit('game:tichu');
 
   return (
@@ -953,8 +982,16 @@ function Playing({
       <TrickArea view={view} nameOf={nameOf} dogFlash={dogFlash} bombFlash={bombFlash} />
 
       {view.wish !== null && (
-        <p className="hint">
-          🀙 소원: <strong>{rankLabel(view.wish)}</strong> 랭크 — 낼 수 있으면 반드시 이행해야 합니다.
+        <p className={`hint${mustFulfillWish ? ' hint--wish' : ''}`}>
+          🀙 소원: <strong>{rankLabel(view.wish)}</strong> 랭크 —{' '}
+          {mustFulfillWish ? (
+            <>
+              지금 <strong>{rankLabel(view.wish)}</strong>를 포함해서 반드시 내야 합니다 (다른 카드·패스
+              불가).
+            </>
+          ) : (
+            '낼 수 있으면 반드시 이행해야 합니다.'
+          )}
         </p>
       )}
 
@@ -1033,6 +1070,13 @@ function Playing({
             아끼려면 패스하세요.
           </p>
         )
+      )}
+
+      {selectionMissesWish && view.wish !== null && (
+        <p className="hint hint--wish">
+          ⚠️ 선택한 카드에 <strong>{rankLabel(view.wish)}</strong>가 없습니다 — 소원을 이행하려면{' '}
+          <strong>{rankLabel(view.wish)}</strong>를 포함해서 내세요.
+        </p>
       )}
 
       <div className="actions actions--row">
@@ -1208,6 +1252,32 @@ const SUGGEST_LIMIT = 8;
 // auto-pass after this delay so a stuck turn doesn't make you click every time.
 const AUTO_PASS_MS = 2500;
 
+// How long to wait for the server's ack on a play/pass before assuming the emit
+// was lost (dropped socket / unresponsive server). Generous: a slow expert-bot
+// turn settling ahead of us, or a brief network stall, shouldn't false-trigger.
+const ACTION_ACK_TIMEOUT_MS = 6000;
+const ACK_TIMEOUT_MSG = '서버 응답이 없어요. 연결 상태를 확인하고 다시 시도하세요.';
+
+/** Re-pull this socket's authoritative game view after a suspected desync. */
+function requestResync() {
+  socket.emit('game:resync');
+}
+
+/**
+ * Handle a play/pass acknowledgement. A rejection (`ok:false`) means our view was
+ * stale — the reason already shows via the `room:error` toast, so just resync to
+ * the server's truth (e.g. a turn a bot took over during a blip). A missing ack
+ * (`err`) means the emit likely never landed: tell the player to retry and resync.
+ */
+function onActionAck(err: Error | null, res: ActionResult | undefined, onError: (m: string) => void) {
+  if (err) {
+    onError(ACK_TIMEOUT_MSG);
+    requestResync();
+    return;
+  }
+  if (res && !res.ok) requestResync();
+}
+
 function comboLabel(c: Combination): string {
   const base = TYPE_LABEL[c.type];
   const r = rankLabel(c.rank);
@@ -1223,13 +1293,51 @@ function comboLabel(c: Combination): string {
   return `${base} ${r}`;
 }
 
+/** Does any card carry this rank? Wishes are 2..14, so only suit cards qualify. */
+function containsRank(cards: Card[], rank: number): boolean {
+  return cards.some((c) => c.kind === 'suit' && c.rank === rank);
+}
+
+/**
+ * Mirrors the server's `canFulfillWish` (shared/game.ts): with a Mahjong wish
+ * outstanding, can the player make a *non-bomb* legal play — beating `top`, or any
+ * lead when `top` is null — that includes the wished rank? If so they are bound to
+ * fulfil it: the server rejects any other play (and any pass). Bombs never bind.
+ */
+function wishBindsHere(hand: Card[], top: Combination | null, wish: number | null): boolean {
+  if (wish === null) return false;
+  const n = hand.length;
+  for (let mask = 1; mask < 1 << n; mask++) {
+    const subset: Card[] = [];
+    let hasWish = false;
+    for (let i = 0; i < n; i++) {
+      if (!(mask & (1 << i))) continue;
+      const card = hand[i];
+      subset.push(card);
+      if (card.kind === 'suit' && card.rank === wish) hasWish = true;
+    }
+    if (!hasWish) continue;
+    const combo = detectCombination(subset);
+    if (combo && combo.bombLevel === 0 && canBeat(combo, top)) return true;
+  }
+  return false;
+}
+
 /**
  * Legal plays from `hand` against the current `top` (null = leading). Brute-forces
  * card subsets (hand ≤14) through the shared detector, dedupes by logical combo,
  * and sorts non-bombs first, grouped by combination type, then cheapest (lowest
  * rank, fewest cards) within a type. A hint only — the server remains authoritative.
+ *
+ * When a fulfillable Mahjong `wish` is outstanding the player is bound to play it
+ * (see {@link wishBindsHere}), so the suggestions are restricted to wish-bearing
+ * moves — otherwise the list would offer plays the server then rejects.
  */
-function legalMoves(hand: Card[], top: Combination | null): Combination[] {
+function legalMoves(
+  hand: Card[],
+  top: Combination | null,
+  wish: number | null = null,
+): Combination[] {
   const n = hand.length;
   if (n === 0) return [];
   const out: Combination[] = [];
@@ -1253,6 +1361,13 @@ function legalMoves(hand: Card[], top: Combination | null): Combination[] {
       a.rank - b.rank || // 3) cheapest (lowest rank) first within a type
       a.length - b.length, // 4) then fewer cards
   );
+  if (wishBindsHere(hand, top, wish)) {
+    const filtered = out.filter((c) => containsRank(c.cards, wish!));
+    // Guard the rare dedup case where the only wish-bearing move shares a combo key
+    // with a non-wish one and was dropped: never collapse to empty (that would read
+    // as "stuck" → auto-pass). The server still enforces the wish in that corner.
+    if (filtered.length > 0) return filtered;
+  }
   return out;
 }
 

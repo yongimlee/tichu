@@ -8,6 +8,14 @@ import type { BotDifficulty, Room, Seat, TeamSelectionMode } from './room';
 /** Standard acknowledgement envelope for request/response style events. */
 export type Ack<T> = { ok: true; data: T } | { ok: false; error: string };
 
+/**
+ * Lightweight ack for fire-and-act game mutations (play/pass): either the move
+ * was accepted, or it was rejected with a reason. Lets the client distinguish a
+ * genuine rejection (resync to the server's truth) from a dropped emit (no ack
+ * arrives at all → surfaced via the socket's ack timeout).
+ */
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
 export interface JoinResult {
   room: Room;
   /** The caller's own player id, so the client can identify itself in `room.players`. */
@@ -62,14 +70,25 @@ export interface ClientToServerEvents {
   'game:grandTichu': (payload: { declare: boolean }) => void;
   'game:exchange': (payload: ExchangeSelection) => void;
   'game:tichu': () => void;
-  'game:play': (payload: {
-    cardIds: string[];
-    wish?: number;
-    desiredTop?: number;
-    phoenixAsLowerTriple?: boolean;
-  }) => void;
-  'game:pass': () => void;
+  // The ack is typed as required so socket.io's `.timeout()` decorates it with the
+  // (err, res) callback on the client; the server still guards it as possibly-absent.
+  'game:play': (
+    payload: {
+      cardIds: string[];
+      wish?: number;
+      desiredTop?: number;
+      phoenixAsLowerTriple?: boolean;
+    },
+    ack: (res: ActionResult) => void,
+  ) => void;
+  'game:pass': (ack: (res: ActionResult) => void) => void;
   'game:giveDragon': (payload: { toSeat: Seat }) => void;
+  /**
+   * Recover from a suspected client/server desync: re-send this socket's current
+   * redacted game view. The client fires it after a rejected play/pass so a stale
+   * view (e.g. a turn the bot already took over) snaps back to the server's truth.
+   */
+  'game:resync': () => void;
   'game:nextHand': () => void;
   'game:emote': (payload: { emoji: string }) => void;
   /** Host: reset scores and redeal, keeping the same players (post-game restart). */

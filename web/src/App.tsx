@@ -222,7 +222,13 @@ export function App() {
         {hash === '#demo' ? (
           <Demo />
         ) : room && view ? (
-          <GameView view={view} room={room} onLeave={handleLeave} tutorial={tutorial} />
+          <GameView
+            view={view}
+            room={room}
+            onLeave={handleLeave}
+            onError={setError}
+            tutorial={tutorial}
+          />
         ) : room ? (
           <RoomView room={room} selfId={selfId} onLeave={handleLeave} />
         ) : (

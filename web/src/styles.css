@@ -492,6 +492,12 @@ input:focus {
   50% { opacity: 1; }
 }
 
+/* Binding Mahjong wish (must play the wished rank this turn): brighter + warm. */
+.hint--wish {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* Toast */
 .toast {
   padding: 0.7rem 1rem;

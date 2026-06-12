@@ -10,6 +10,7 @@ import {
   playCards,
   submitExchange,
   toPlayerView,
+  type ActionResult,
   type BotDifficulty,
   type ClientToServerEvents,
   type Emote,
@@ -76,15 +77,23 @@ export function registerSocketHandlers(
   };
 
   // Run a game mutation, settle the hand if it finished, and broadcast views.
-  const withGame = (fn: (ctx: { room: Room; state: GameState; seat: Seat }) => void) => {
+  const withGame = (
+    fn: (ctx: { room: Room; state: GameState; seat: Seat }) => void,
+    ack?: (res: ActionResult) => void,
+  ) => {
     try {
       const ctx = requireGame();
       fn(ctx);
       games.settle(ctx.room.code);
       emitGameState(ctx.room);
       bots.kick(ctx.room.code);
+      ack?.({ ok: true });
     } catch (err) {
-      socket.emit('room:error', { message: errMessage(err) });
+      const message = errMessage(err);
+      // Keep the user-facing toast (all callers). The ack is an additional, reliable
+      // signal for callers that pass one, so they can resync after a rejection.
+      socket.emit('room:error', { message });
+      ack?.({ ok: false, error: message });
     }
   };
 
@@ -206,16 +215,31 @@ export function registerSocketHandlers(
     withGame(({ state, seat }) => declareTichu(state, seat));
   });
 
-  socket.on('game:play', ({ cardIds, wish, desiredTop, phoenixAsLowerTriple }) => {
-    withGame(({ state, seat }) => playCards(state, seat, cardIds, { wish, desiredTop, phoenixAsLowerTriple }));
+  socket.on('game:play', ({ cardIds, wish, desiredTop, phoenixAsLowerTriple }, ack) => {
+    withGame(
+      ({ state, seat }) => playCards(state, seat, cardIds, { wish, desiredTop, phoenixAsLowerTriple }),
+      ack,
+    );
   });
 
-  socket.on('game:pass', () => {
-    withGame(({ state, seat }) => pass(state, seat));
+  socket.on('game:pass', (ack) => {
+    withGame(({ state, seat }) => pass(state, seat), ack);
   });
 
   socket.on('game:giveDragon', ({ toSeat }) => {
     withGame(({ state, seat }) => giveDragon(state, seat, toSeat));
+  });
+
+  // Resync: re-send just this socket's redacted view so a desynced client (e.g. a
+  // turn a bot took over during a blip) recovers without disturbing the others.
+  socket.on('game:resync', () => {
+    try {
+      const { room, state, seat } = requireGame();
+      const match = games.getMatchInfo(room.code);
+      if (match) io.to(socket.id).emit('game:state', toPlayerView(state, seat, match));
+    } catch {
+      // No room/game/seat to resync to — nothing to send.
+    }
   });
 
   socket.on('game:nextHand', () => {
