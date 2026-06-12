@@ -577,6 +577,22 @@ input:focus {
   width: auto;
 }
 
+/* Game-end actions arranged 2×2 (overrides per-variant width: 100%). */
+.actions--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.actions--grid .btn {
+  width: auto;
+}
+
+/* Non-host sees only the leave button — let it span the full width. */
+.actions--grid .btn:only-child {
+  grid-column: 1 / -1;
+}
+
 /* Collapsible rules reference at the bottom of the game screen. */
 .rules {
   margin-top: 0.75rem;

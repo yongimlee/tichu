@@ -427,7 +427,7 @@ function Finished({
       {!isHost && (
         <p className="hint">방장이 다시 시작하거나 자리를 다시 배치하거나 새 방을 열 수 있어요.</p>
       )}
-      <div className="actions actions--row">
+      <div className="actions actions--grid">
         {isHost && (
           <>
             <button className="btn btn--primary" onClick={() => socket.emit('game:restart')}>
