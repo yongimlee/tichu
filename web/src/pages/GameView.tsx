@@ -134,22 +134,28 @@ export function GameView({ view, room, onLeave, onError, tutorial = false }: Pro
     if (view.phase !== 'exchange') setMahjongExchange('none');
   }, [view.phase]);
 
-  // Deal-in animation: cards are dealt in two waves per hand — the opening 8
-  // (entering grand-tichu) and the remaining 6 (entering exchange). When fresh
-  // cards arrive we flag their ids so the Hand staggers them in. We diff against
-  // the previously held cards so the 6-card wave animates only the new arrivals,
-  // not the whole 14. The flag is one-shot, cleared once the animation finishes.
+  // Deal-in animation: fresh cards arrive in three waves per hand — the opening 8
+  // (entering grand-tichu), the remaining 6 (entering exchange), and the 3 received
+  // in the card exchange (entering playing). When new cards arrive we flag their ids
+  // so the Hand staggers them in; we diff against the previously held cards so each
+  // wave animates only the new arrivals, not the whole hand. The flag is one-shot,
+  // cleared once the animation finishes.
   const prevPhaseRef = useRef<PlayerView['phase'] | null>(null);
   const prevHandRef = useRef<string[]>([]);
   const [dealing, setDealing] = useState<{ ids: Set<string>; key: number } | null>(null);
   useEffect(() => {
     const prevPhase = prevPhaseRef.current;
     const handIds = view.hand.map((c) => c.id);
+    const newcomers = () => {
+      const had = new Set(prevHandRef.current);
+      return new Set(handIds.filter((id) => !had.has(id)));
+    };
     if (view.phase === 'grand-tichu' && prevPhase !== 'grand-tichu') {
       setDealing({ ids: new Set(handIds), key: Date.now() });
     } else if (view.phase === 'exchange' && prevPhase === 'grand-tichu') {
-      const had = new Set(prevHandRef.current);
-      setDealing({ ids: new Set(handIds.filter((id) => !had.has(id))), key: Date.now() });
+      setDealing({ ids: newcomers(), key: Date.now() }); // the held-back 6
+    } else if (view.phase === 'playing' && prevPhase === 'exchange') {
+      setDealing({ ids: newcomers(), key: Date.now() }); // the 3 received in the exchange
     }
     prevPhaseRef.current = view.phase;
     prevHandRef.current = handIds;
@@ -224,6 +230,7 @@ export function GameView({ view, room, onLeave, onError, tutorial = false }: Pro
           bombFlash={bombFlash}
           onError={onError}
           onSpecialsSelected={tutorial ? setSelectedSpecials : undefined}
+          dealingIds={dealingIds}
         />
       )}
       {view.phase === 'scoring' && <Scoring view={view} isHost={isHost} nameOf={nameOf} />}
@@ -833,6 +840,7 @@ function Playing({
   bombFlash,
   onError,
   onSpecialsSelected,
+  dealingIds,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
@@ -842,6 +850,8 @@ function Playing({
   onError: (message: string) => void;
   /** Tutorial: report which special cards are currently selected, for the coach. */
   onSpecialsSelected?: (names: string[]) => void;
+  /** Ids of the 3 cards received in the exchange, to animate in on entering play. */
+  dealingIds?: Set<string>;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
@@ -1052,7 +1062,7 @@ function Playing({
 
       {view.pendingDragon === view.selfSeat && <DragonGift view={view} nameOf={nameOf} />}
 
-      <Hand cards={view.hand} selectedIds={selected} onToggle={toggle} />
+      <Hand cards={view.hand} selectedIds={selected} onToggle={toggle} dealingIds={dealingIds} />
 
       {hasMahjong && (
         <div className="field">
