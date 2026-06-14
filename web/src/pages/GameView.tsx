@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   canBeat,
   cardPoints,
@@ -134,6 +134,34 @@ export function GameView({ view, room, onLeave, onError, tutorial = false }: Pro
     if (view.phase !== 'exchange') setMahjongExchange('none');
   }, [view.phase]);
 
+  // Deal-in animation: cards are dealt in two waves per hand — the opening 8
+  // (entering grand-tichu) and the remaining 6 (entering exchange). When fresh
+  // cards arrive we flag their ids so the Hand staggers them in. We diff against
+  // the previously held cards so the 6-card wave animates only the new arrivals,
+  // not the whole 14. The flag is one-shot, cleared once the animation finishes.
+  const prevPhaseRef = useRef<PlayerView['phase'] | null>(null);
+  const prevHandRef = useRef<string[]>([]);
+  const [dealing, setDealing] = useState<{ ids: Set<string>; key: number } | null>(null);
+  useEffect(() => {
+    const prevPhase = prevPhaseRef.current;
+    const handIds = view.hand.map((c) => c.id);
+    if (view.phase === 'grand-tichu' && prevPhase !== 'grand-tichu') {
+      setDealing({ ids: new Set(handIds), key: Date.now() });
+    } else if (view.phase === 'exchange' && prevPhase === 'grand-tichu') {
+      const had = new Set(prevHandRef.current);
+      setDealing({ ids: new Set(handIds.filter((id) => !had.has(id))), key: Date.now() });
+    }
+    prevPhaseRef.current = view.phase;
+    prevHandRef.current = handIds;
+  }, [view.phase, view.hand]);
+  useEffect(() => {
+    if (!dealing) return;
+    // 8 cards × 0.06s stagger + ~0.35s per-card animation, with margin.
+    const t = setTimeout(() => setDealing(null), 1100);
+    return () => clearTimeout(t);
+  }, [dealing]);
+  const dealingIds = dealing?.ids;
+
   return (
     <div className={`game${bombFlash ? ' game--bomb' : ''}`}>
       {bombFlash && (
@@ -177,12 +205,15 @@ export function GameView({ view, room, onLeave, onError, tutorial = false }: Pro
         emoteOf={emoteOf}
       />
 
-      {view.phase === 'grand-tichu' && <GrandTichu view={view} decided={self.decidedGrandTichu} />}
+      {view.phase === 'grand-tichu' && (
+        <GrandTichu view={view} decided={self.decidedGrandTichu} dealingIds={dealingIds} />
+      )}
       {view.phase === 'exchange' && (
         <Exchange
           view={view}
           nameOf={nameOf}
           onMahjongExchange={tutorial ? setMahjongExchange : undefined}
+          dealingIds={dealingIds}
         />
       )}
       {view.phase === 'playing' && (
@@ -566,11 +597,15 @@ function Hand({
   cards,
   selectedIds = new Set(),
   onToggle,
+  dealingIds,
 }: {
   cards: Card[];
   selectedIds?: Set<string>;
   onToggle?: (card: Card) => void;
+  /** Ids of cards to play the deal-in animation on (freshly dealt this phase). */
+  dealingIds?: Set<string>;
 }) {
+  let dealOrder = 0; // position among the dealing cards, for the staggered delay
   return (
     <div className="hand">
       {cards.map((card) => (
@@ -579,19 +614,28 @@ function Hand({
           card={card}
           selected={selectedIds.has(card.id)}
           onClick={onToggle ? () => onToggle(card) : undefined}
+          dealIndex={dealingIds?.has(card.id) ? dealOrder++ : undefined}
         />
       ))}
     </div>
   );
 }
 
-function GrandTichu({ view, decided }: { view: PlayerView; decided: boolean }) {
+function GrandTichu({
+  view,
+  decided,
+  dealingIds,
+}: {
+  view: PlayerView;
+  decided: boolean;
+  dealingIds?: Set<string>;
+}) {
   const decide = (declare: boolean) => socket.emit('game:grandTichu', { declare });
   return (
     <section className="card phase">
       <h2>라지 티츄</h2>
       <p className="hint">처음 받은 8장입니다. 라지 티츄(200점)를 선언하시겠어요?</p>
-      <Hand cards={view.hand} />
+      <Hand cards={view.hand} dealingIds={dealingIds} />
       {decided ? (
         <p className="hint">결정 완료 — 다른 플레이어를 기다리는 중…</p>
       ) : (
@@ -618,11 +662,14 @@ function Exchange({
   view,
   nameOf,
   onMahjongExchange,
+  dealingIds,
 }: {
   view: PlayerView;
   nameOf: (s: Seat) => string;
   /** Tutorial: report where the Mahjong is currently staged (partner vs opponent). */
   onMahjongExchange?: (target: 'none' | 'partner' | 'opponent') => void;
+  /** Ids of the 6 freshly-dealt cards to animate in on entering the exchange phase. */
+  dealingIds?: Set<string>;
 }) {
   const [picks, setPicks] = useState<Record<SlotKey, string>>({
     toLeft: '',
@@ -764,6 +811,7 @@ function Exchange({
         cards={USE_EXCHANGE_DROPDOWN ? view.hand : view.hand.filter((c) => !used.includes(c.id))}
         selectedIds={USE_EXCHANGE_DROPDOWN ? new Set(used) : staged ? new Set([staged]) : new Set()}
         onToggle={USE_EXCHANGE_DROPDOWN ? undefined : toggleStaged}
+        dealingIds={dealingIds}
       />
       {!grandDeclared && (
         <p className="hint">전체 14장을 확인했으니 지금 티츄(100점)를 선언할 수 있습니다.</p>

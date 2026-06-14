@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Card } from '@tichu/shared';
 import dogImg from '../assets/cards/dog.png';
 import dragonImg from '../assets/cards/dragon.png';
@@ -32,15 +33,27 @@ interface Props {
   selected?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  /** When set, plays a staggered deal-in animation; the number is the card's
+   *  position among the cards being dealt (drives the per-card delay). */
+  dealIndex?: number;
 }
 
-export function CardChip({ card, selected, disabled, onClick }: Props) {
-  const cls = (extra: string) => `card ${extra}${selected ? ' card--selected' : ''}`;
+export function CardChip({ card, selected, disabled, onClick, dealIndex }: Props) {
+  const dealing = dealIndex !== undefined;
+  const cls = (extra: string) =>
+    `card ${extra}${selected ? ' card--selected' : ''}${dealing ? ' card--dealing' : ''}`;
+  const style = dealing ? ({ '--deal-i': dealIndex } as CSSProperties) : undefined;
 
   if (card.kind === 'special') {
     const s = SPECIAL[card.name];
     return (
-      <button className={cls('card--special')} disabled={disabled} onClick={onClick} type="button">
+      <button
+        className={cls('card--special')}
+        style={style}
+        disabled={disabled}
+        onClick={onClick}
+        type="button"
+      >
         <img className="card__img" src={s.img} alt={s.label} draggable={false} />
       </button>
     );
@@ -48,7 +61,13 @@ export function CardChip({ card, selected, disabled, onClick }: Props) {
 
   const rank = RANK_LABEL[card.rank] ?? String(card.rank);
   return (
-    <button className={cls(`card--${card.suit}`)} disabled={disabled} onClick={onClick} type="button">
+    <button
+      className={cls(`card--${card.suit}`)}
+      style={style}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
       <span className="card__rank">{rank}</span>
       <span className="card__glyph">{SUIT_GLYPH[card.suit]}</span>
     </button>

@@ -1135,6 +1135,32 @@ input:focus {
   border-radius: var(--radius);
 }
 
+/* Deal-in: freshly dealt cards drop into the hand one after another. The
+   per-card delay is driven by --deal-i (set in CardChip), so the 8- and 6-card
+   waves fan out instead of appearing all at once. `backwards` keeps each card
+   hidden through its delay. */
+@keyframes dealIn {
+  from {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.82) rotate(-7deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hand .card--dealing {
+  animation: dealIn 0.34s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--deal-i, 0) * 0.06s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand .card--dealing {
+    animation: none;
+  }
+}
+
 .hand .card,
 .trick__cards .card,
 .exchange-panel__card .card {
