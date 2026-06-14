@@ -856,6 +856,11 @@ function Playing({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [wish, setWish] = useState('');
   const [showAllSuggest, setShowAllSuggest] = useState(false); // expand the trimmed suggestion list
+  // Once a card has been played this hand, declaring Tichu requires a second tap
+  // (the button sits next to 패스, so a slip used to declare by accident). The
+  // first tap "arms" the button for a few seconds; the second actually declares.
+  const [tichuArmed, setTichuArmed] = useState(false);
+  const tichuArmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Whether to surface the "추천 조합" helper chips. Persisted so the preference
   // survives reloads. The forced-pass safety below ignores this — it always runs.
   const [suggestOn, setSuggestOn] = useState(
@@ -1007,7 +1012,25 @@ function Playing({
     socket
       .timeout(ACTION_ACK_TIMEOUT_MS)
       .emit('game:pass', (err, res) => onActionAck(err, res, onError));
-  const declareTichu = () => socket.emit('game:tichu');
+  // Has the hand's play actually started? Before the first card is played there's
+  // no 패스 button to slip on, so keep Tichu a single tap; after, require confirm.
+  const playStarted = view.seats.some((s) => s.hasPlayed);
+  const disarmTichu = () => {
+    if (tichuArmTimer.current) clearTimeout(tichuArmTimer.current);
+    tichuArmTimer.current = null;
+    setTichuArmed(false);
+  };
+  const declareTichu = () => {
+    if (playStarted && !tichuArmed) {
+      setTichuArmed(true);
+      if (tichuArmTimer.current) clearTimeout(tichuArmTimer.current);
+      tichuArmTimer.current = setTimeout(() => setTichuArmed(false), 3000);
+      return;
+    }
+    disarmTichu();
+    socket.emit('game:tichu');
+  };
+  useEffect(() => () => disarmTichu(), []);
 
   return (
     <section className="card phase">
@@ -1146,8 +1169,13 @@ function Playing({
 
       <div className="actions actions--row">
         {!self.hasPlayed && !self.grandTichu && !self.tichu && (
-          <button className="btn btn--secondary" onClick={declareTichu}>
-            티츄 선언
+          <button
+            className={`btn ${tichuArmed ? 'btn--danger tichu-armed' : 'btn--secondary'}`}
+            onClick={declareTichu}
+            onBlur={disarmTichu}
+            title={tichuArmed ? '한 번 더 눌러 티츄를 선언합니다' : undefined}
+          >
+            {tichuArmed ? '⚠️ 티츄 확정?' : '티츄 선언'}
           </button>
         )}
         <button className="btn" disabled={!myTurn || isLeading} onClick={doPass}>

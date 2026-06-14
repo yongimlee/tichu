@@ -292,6 +292,26 @@ input:focus {
   color: var(--muted);
 }
 
+.btn--danger {
+  background: var(--danger);
+  color: #fff;
+  width: 100%;
+}
+
+/* Tichu button armed (awaiting the confirming second tap). */
+.tichu-armed {
+  animation: tichu-armed-pulse 0.9s ease-in-out infinite;
+}
+@keyframes tichu-armed-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+  }
+}
+
 .btn--small {
   padding: 0.4rem 0.7rem;
   font-size: 0.85rem;
