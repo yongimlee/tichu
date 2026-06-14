@@ -549,15 +549,14 @@ input:focus {
   color: #fff;
 }
 
-/* Error/rejection toast — floats fixed at the bottom-centre so it's visible right
-   where the player's attention is during play (the hand + action buttons sit at the
-   bottom on mobile); an in-flow toast at the top of the page was easy to miss. Solid
-   dark fill so it stays readable when it overlaps the busy hand. */
+/* Error/rejection toast — floats fixed at the screen centre so it's impossible to
+   miss during play (an in-flow toast at the top of the page was easy to overlook on
+   mobile). Solid dark fill so it stays readable when it overlaps the busy hand. */
 .toast--error {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
-  transform: translate(-50%, 0);
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 80;
   width: max-content;
   max-width: 92%;
@@ -570,11 +569,11 @@ input:focus {
   animation: toast-rise 0.25s ease-out;
 }
 
-/* Rise-in for the bottom-centred error toast — keeps the translateX(-50%) centring
-   throughout (a plain translateY keyframe would drop the horizontal centring). */
+/* Rise-in for the centred error toast — keeps the translate(-50%, -50%) centring
+   throughout (a plain translateY keyframe would drop the centring). */
 @keyframes toast-rise {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
 /* Game view */
