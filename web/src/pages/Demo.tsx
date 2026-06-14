@@ -205,8 +205,8 @@ function buildView(scenario: GameScenario): PlayerView {
         pendingDragon: 0,
         seats: seats([13, 12, 11, 12]),
         trick: [
-          { seat: 3, type: 'single', cards: [suit('jade', 5)] },
-          { seat: 0, type: 'single', cards: [DRAGON] },
+          { seat: 3, type: 'single', cards: [suit('jade', 5)], rank: 5 },
+          { seat: 0, type: 'single', cards: [DRAGON], rank: 15 },
         ],
         trickOwner: 0,
       };
@@ -227,11 +227,12 @@ function buildView(scenario: GameScenario): PlayerView {
         turn: 0,
         seats: seats([14, 13, 12, 9]),
         trick: [
-          { seat: 2, type: 'single', cards: [suit('star', 14)] },
+          { seat: 2, type: 'single', cards: [suit('star', 14)], rank: 14 },
           {
             seat: 3,
             type: 'bomb',
             cards: [suit('jade', 7), suit('sword', 7), suit('pagoda', 7), suit('star', 7)],
+            rank: 7,
           },
         ],
         trickOwner: 3,
@@ -252,8 +253,8 @@ function buildView(scenario: GameScenario): PlayerView {
         seats: seats([14, 13, 12, 13], CAPTURED_MID),
         wish: 8,
         trick: [
-          { seat: 2, type: 'single', cards: [suit('star', 8)] },
-          { seat: 3, type: 'single', cards: [suit('sword', 11)] },
+          { seat: 2, type: 'single', cards: [suit('star', 8)], rank: 8 },
+          { seat: 3, type: 'single', cards: [suit('sword', 11)], rank: 11 },
         ],
         trickOwner: 3,
       };

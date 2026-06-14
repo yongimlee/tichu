@@ -835,7 +835,14 @@ function Playing({
   const topCombo = useMemo(() => {
     if (isLeading) return null;
     const p = [...view.trick].reverse().find((x) => x.seat === view.trickOwner);
-    return p ? detectCombination(p.cards) : null;
+    if (!p) return null;
+    const combo = detectCombination(p.cards);
+    if (!combo) return null;
+    // Re-detection can't recover a context-dependent rank — a Phoenix single's
+    // value comes from the card it beat (e.g. 14.5 on an Ace), not the lone-card
+    // default of 1.5. Trust the server's resolved rank from the view.
+    combo.rank = p.rank;
+    return combo;
   }, [view.trick, view.trickOwner, isLeading]);
 
   const suggestions = useMemo(

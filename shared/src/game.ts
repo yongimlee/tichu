@@ -450,6 +450,14 @@ export interface ViewTrickPlay {
   seat: Seat;
   type: CombinationType;
   cards: Card[];
+  /**
+   * The combination's resolved comparison rank. Sent because some ranks are not
+   * recoverable from `cards` alone: a Phoenix played as a single takes its value
+   * from the card it beat (e.g. 14.5 on an Ace), but re-detecting a lone Phoenix
+   * client-side would read the leading default (1.5). The client needs this to
+   * suggest only legal beats.
+   */
+  rank: number;
 }
 
 export interface PlayerView {
@@ -490,7 +498,12 @@ export function toPlayerView(state: GameState, seat: Seat, match: MatchInfo): Pl
     })),
     turn: state.turn,
     leader: state.leader,
-    trick: state.trick.plays.map((p) => ({ seat: p.seat, type: p.combo.type, cards: p.combo.cards })),
+    trick: state.trick.plays.map((p) => ({
+      seat: p.seat,
+      type: p.combo.type,
+      cards: p.combo.cards,
+      rank: p.combo.rank,
+    })),
     trickOwner: state.trick.owner,
     wish: state.wish,
     finished: state.finished,
