@@ -105,6 +105,12 @@ export interface ClientToServerEvents {
   /** Fun: someone patted the developer's head. Server logs who (or "anonymous"). */
   'dev:pat': () => void;
   /**
+   * User feedback — a bug report or suggestion. Posted to a SEPARATE Discord channel
+   * from the head-pat feed (its own webhook), so VOC isn't buried among pats. The ack
+   * confirms the server accepted it (or rejected: empty/too long/rate-limited).
+   */
+  'dev:feedback': (payload: { message: string }, ack: (res: ActionResult) => void) => void;
+  /**
    * Tutorial only: freeze (or release) the fill bots while a coach message is on
    * screen, so the game doesn't advance before the player has read the guidance.
    * The server ignores it outside a tutorial room.
@@ -121,4 +127,6 @@ export interface SocketData {
   lastEmoteAt?: number;
   /** Timestamp of the last head-pat, for light anti-spam rate limiting. */
   lastPatAt?: number;
+  /** Timestamp of the last feedback submission, for anti-spam rate limiting. */
+  lastFeedbackAt?: number;
 }

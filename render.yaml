@@ -26,3 +26,7 @@ services:
       # Render dashboard (sync: false → kept out of git, survives blueprint syncs).
       - key: DISCORD_WEBHOOK_URL
         sync: false
+      # Optional: SEPARATE Discord webhook for user feedback (bug reports/suggestions),
+      # kept apart from the head-pat feed. Set in the dashboard (sync: false).
+      - key: DISCORD_FEEDBACK_WEBHOOK_URL
+        sync: false

@@ -44,6 +44,11 @@ export function App() {
   const [error, setError] = useState('');
   const [praiseAt, setPraiseAt] = useState(0); // head-pat-the-dev easter egg
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // Feedback (VOC) — bug reports / suggestions, posted to a separate Discord channel.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackSentAt, setFeedbackSentAt] = useState(0);
   const [tutorial, setTutorial] = useState(() => localStorage.getItem(TUTORIAL_KEY) === '1');
 
   // Dev-only UI showcase: open with #demo to view the in-game screen solo.
@@ -90,6 +95,13 @@ export function App() {
     const t = setTimeout(() => setError(''), 4000);
     return () => clearTimeout(t);
   }, [error]);
+
+  // Auto-dismiss the "의견 감사합니다" confirmation after a feedback send.
+  useEffect(() => {
+    if (!feedbackSentAt) return;
+    const t = setTimeout(() => setFeedbackSentAt(0), 2500);
+    return () => clearTimeout(t);
+  }, [feedbackSentAt]);
 
   // Auto-dismiss the "개발자가 좋아합니다" message (re-armed on each pat).
   useEffect(() => {
@@ -152,6 +164,26 @@ export function App() {
     setTutorial(true);
   };
 
+  const sendFeedback = () => {
+    const message = feedbackText.trim();
+    if (!message || feedbackSending) return;
+    setFeedbackSending(true);
+    socket.timeout(8000).emit('dev:feedback', { message }, (err, res) => {
+      setFeedbackSending(false);
+      if (err) {
+        setError('전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setFeedbackOpen(false);
+      setFeedbackText('');
+      setFeedbackSentAt(Date.now());
+    });
+  };
+
   const inGame = hash === '#demo' || Boolean(room && view);
 
   return (
@@ -166,19 +198,32 @@ export function App() {
           ) : (
             <span />
           )}
-          <div className="pat">
-            {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다🥰</div>}
-            <button
-              type="button"
-              className="pat-btn"
-              onClick={() => {
-                setPraiseAt(Date.now());
-                socket.emit('dev:pat'); // server logs who patted (anon on home)
-              }}
-              title="개발자 쓰담쓰담"
-            >
-              🫳 개발자 쓰담쓰담
-            </button>
+          <div className="dev-actions">
+            <div className="voc">
+              {feedbackSentAt > 0 && <div className="pat-toast">편지 전달 중 💌</div>}
+              <button
+                type="button"
+                className="voc-btn"
+                onClick={() => setFeedbackOpen(true)}
+                title="편지쓰기"
+              >
+                💌 편지쓰기
+              </button>
+            </div>
+            <div className="pat">
+              {praiseAt > 0 && <div className="pat-toast">개발자가 좋아합니다🥰</div>}
+              <button
+                type="button"
+                className="pat-btn"
+                onClick={() => {
+                  setPraiseAt(Date.now());
+                  socket.emit('dev:pat'); // server logs who patted (anon on home)
+                }}
+                title="개발자 쓰담쓰담"
+              >
+                🫳 개발자 쓰담쓰담
+              </button>
+            </div>
           </div>
         </div>
         {room && view ? (
@@ -210,6 +255,49 @@ export function App() {
                 type="button"
                 className="btn btn--ghost modal__btn"
                 onClick={() => setConfirmLeave(false)}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {feedbackOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            if (!feedbackSending) setFeedbackOpen(false);
+          }}
+        >
+          <div className="modal modal--feedback" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">💌 편지쓰기</h3>
+            <p className="modal__body">적어주신 내용은 개발자에게 전달됩니다.</p>
+            <textarea
+              className="feedback__input"
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value.slice(0, 1000))}
+              placeholder="무엇이든 자유롭게 적어주세요 (최대 1000자) — 버그, 건의사항, 하고싶은 말 등"
+              rows={5}
+              maxLength={1000}
+              autoFocus
+              disabled={feedbackSending}
+            />
+            <div className="feedback__count">{feedbackText.length}/1000</div>
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="btn modal__btn"
+                onClick={sendFeedback}
+                disabled={feedbackSending || !feedbackText.trim()}
+              >
+                {feedbackSending ? '보내는 중…' : '보내기'}
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost modal__btn"
+                onClick={() => setFeedbackOpen(false)}
+                disabled={feedbackSending}
               >
                 취소
               </button>

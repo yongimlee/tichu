@@ -338,6 +338,28 @@ export function registerSocketHandlers(
     logPat(`${who} 머리를 쓰다듬었습니다.`);
   });
 
+  socket.on('dev:feedback', (payload, ack) => {
+    const now = Date.now();
+    if (now - (socket.data.lastFeedbackAt ?? 0) < 5000) {
+      ack?.({ ok: false, error: '잠시 후 다시 보내주세요.' });
+      return;
+    }
+    const message = (payload?.message ?? '').trim();
+    if (!message) {
+      ack?.({ ok: false, error: '내용을 입력해주세요.' });
+      return;
+    }
+    if (message.length > 1000) {
+      ack?.({ ok: false, error: '내용이 너무 깁니다. (최대 1000자)' });
+      return;
+    }
+    socket.data.lastFeedbackAt = now;
+    const room = rooms.getRoomBySocket(socket.id);
+    const player = room?.players.find((p) => p.id === socket.id);
+    logFeedback(player?.nickname ?? '익명', message);
+    ack?.({ ok: true });
+  });
+
   socket.on('disconnect', () => {
     const room = rooms.disconnect(socket.id);
     if (room) {
@@ -362,6 +384,25 @@ function logPat(message: string): void {
     body: JSON.stringify({ content: message }),
   }).catch(() => {
     /* best-effort — never let a logging failure affect gameplay */
+  });
+}
+
+/**
+ * Record a user feedback (bug/suggestion). Always logs to the server console. If
+ * DISCORD_FEEDBACK_WEBHOOK_URL is set, posts there — a SEPARATE channel from the
+ * head-pat feed (DISCORD_WEBHOOK_URL) so VOC isn't buried among pats. No fallback to
+ * the pat webhook: the two feeds are kept deliberately separate.
+ */
+function logFeedback(who: string, message: string): void {
+  console.log(`[feedback] ${new Date().toISOString()} ${who}: ${message}`);
+  const url = process.env.DISCORD_FEEDBACK_WEBHOOK_URL;
+  if (!url) return;
+  void fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ content: `💌 **편지** — ${who}\n${message}` }),
+  }).catch(() => {
+    /* best-effort — never let a logging failure affect anything */
   });
 }
 

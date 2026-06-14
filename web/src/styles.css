@@ -88,13 +88,24 @@ body {
   transform: scale(0.94);
 }
 
+/* Dev actions group — feedback (VOC) + pat-the-dev, grouped on the right of the
+   controls row. */
+.dev-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
 /* Pat-the-developer easter egg — right side of the controls row, with a small
-   message that pops up just below it. */
-.pat {
+   message that pops up just below it. The VOC (feedback) button shares its look,
+   and its "감사합니다" confirmation anchors below the VOC button the same way. */
+.pat,
+.voc {
   position: relative;
   width: max-content;
 }
-.pat-btn {
+.pat-btn,
+.voc-btn {
   display: block;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -105,6 +116,16 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: transform 0.08s ease, background 0.15s ease;
+}
+/* The feedback button leads with an accent border so it reads as the actionable one;
+   the pat button gets its own (primary) border so the pair reads as a tidy set. */
+.voc-btn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pat-btn {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 .pat-toast {
   position: absolute;
@@ -121,16 +142,24 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: patPop 0.18s ease both;
 }
+/* Each confirmation toast matches its button's border colour (VOC = accent above,
+   pat = primary). */
+.pat .pat-toast {
+  border-color: var(--primary);
+  color: var(--primary);
+}
 @keyframes patPop {
   from {
     opacity: 0;
     transform: translateY(-4px);
   }
 }
-.pat-btn:hover {
+.pat-btn:hover,
+.voc-btn:hover {
   background: var(--surface-2);
 }
-.pat-btn:active {
+.pat-btn:active,
+.voc-btn:active {
   transform: scale(0.94);
 }
 
@@ -547,6 +576,39 @@ input:focus {
 .modal__btn--danger {
   background: var(--danger);
   color: #fff;
+}
+
+/* Feedback (VOC) modal — a touch wider to fit the message box. */
+.modal--feedback {
+  max-width: 380px;
+}
+.modal--feedback .modal__body {
+  margin-bottom: 0.6rem;
+}
+.feedback__input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 5.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.feedback__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.feedback__count {
+  margin: 0.3rem 0 0.9rem;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Error/rejection toast — floats fixed at the screen centre so it's impossible to
