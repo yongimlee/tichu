@@ -24,22 +24,10 @@ async function main() {
   await sharp(SRC).resize(180, 180).png().toFile(join(OUT, 'apple-touch-icon.png'));
   await sharp(SRC).resize(32, 32).png().toFile(join(OUT, 'favicon-32.png'));
 
-  // Maskable: shrink the artwork into the 80% safe zone (≈410px) so Android's
-  // mask never clips the title/creatures, and pad with a blurred, brightened
-  // copy of the same artwork so the border blends seamlessly into the edges
-  // instead of showing a hard colour box.
-  const SAFE = Math.round(512 * 0.8); // 410
-  const backdrop = await sharp(SRC)
-    .resize(512, 512)
-    .blur(24)
-    .modulate({ lightness: 12 })
-    .png()
-    .toBuffer();
-  const logo = await sharp(SRC).resize(SAFE, SAFE).png().toBuffer();
-  await sharp(backdrop)
-    .composite([{ input: logo, gravity: 'centre' }])
-    .png()
-    .toFile(join(OUT, 'icon-512-maskable.png'));
+  // Maskable: use the original artwork full-bleed, as-is. Android may clip the
+  // outer edges to fit its mask shape, but per request we apply the source
+  // directly with no shrink/padding treatment.
+  await sharp(SRC).resize(512, 512).png().toFile(join(OUT, 'icon-512-maskable.png'));
 
   console.log('icons written to web/public/');
 }
